@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+﻿// SPDX-License-Identifier: GPL-2.0-only
 /*
  * wm8960.c  --  WM8960 ALSA SoC Audio driver
  *
@@ -131,6 +131,7 @@ struct wm8960_priv {
 	int sysclk;
 	int clk_id;
 	int freq_in;
+	int hp_det[2];
 	bool is_stream_in_use[2];
 	struct wm8960_data pdata;
 };
@@ -1335,14 +1336,22 @@ static const struct snd_soc_dai_ops wm8960_dai_ops = {
 	.set_sysclk = wm8960_set_dai_sysclk,
 };
 
-static struct snd_soc_dai_driver wm8960_dai = {
-	.name = "wm8960-hifi",
+static struct snd_soc_dai_driver wm8960_dai[] = {
+{
+		.name = "wm8960-hifi-Playback",
+		.id = 1,
 	.playback = {
 		.stream_name = "Playback",
 		.channels_min = 1,
 		.channels_max = 2,
 		.rates = WM8960_RATES,
 		.formats = WM8960_FORMATS,},
+		.ops = &wm8960_dai_ops,
+		.symmetric_rates = 1,
+	},
+	{
+		.name = "wm8960-hifi-Capture",
+		.id = 2,
 	.capture = {
 		.stream_name = "Capture",
 		.channels_min = 1,
@@ -1351,17 +1360,77 @@ static struct snd_soc_dai_driver wm8960_dai = {
 		.formats = WM8960_FORMATS,},
 	.ops = &wm8960_dai_ops,
 	.symmetric_rates = 1,
+	}
 };
 
 static int wm8960_probe(struct snd_soc_component *component)
 {
 	struct wm8960_priv *wm8960 = snd_soc_component_get_drvdata(component);
 	struct wm8960_data *pdata = &wm8960->pdata;
+	int repeat_reset = 10;
+	int ret;
 
 	if (pdata->capless)
 		wm8960->set_bias_level = wm8960_set_bias_level_capless;
 	else
 		wm8960->set_bias_level = wm8960_set_bias_level_out3;
+	do {
+		ret = wm8960_reset(wm8960->regmap);
+		repeat_reset--;
+	} while (repeat_reset > 0 && ret != 0);
+	wm8960->set_bias_level(component, SND_SOC_BIAS_STANDBY);
+
+	/* Latch the update bits */
+	snd_soc_component_update_bits(component, WM8960_LINVOL, 0x100, 0x100);
+	snd_soc_component_update_bits(component, WM8960_RINVOL, 0x100, 0x100);
+	snd_soc_component_update_bits(component, WM8960_LADC, 0x100, 0x100);
+	snd_soc_component_update_bits(component, WM8960_RADC, 0x100, 0x100);
+	snd_soc_component_update_bits(component, WM8960_LDAC, 0x100, 0x100);
+	snd_soc_component_update_bits(component, WM8960_RDAC, 0x100, 0x100);
+	snd_soc_component_update_bits(component, WM8960_LOUT1, 0x100, 0x100);
+	snd_soc_component_update_bits(component, WM8960_ROUT1, 0x100, 0x100);
+	snd_soc_component_update_bits(component, WM8960_LOUT2, 0x100, 0x100);
+	snd_soc_component_update_bits(component, WM8960_ROUT2, 0x100, 0x100);
+	
+	/* other configuration */
+	snd_soc_component_update_bits(component, WM8960_POWER1, 0x1ea, 0x1ea);
+	snd_soc_component_update_bits(component, WM8960_POWER2, 0x1f8, 0x1f8);
+	snd_soc_component_update_bits(component, WM8960_POWER3, 0xcc, 0xcc);
+	snd_soc_component_update_bits(component, WM8960_LOUTMIX, 0x100, 0x100);
+	snd_soc_component_update_bits(component, WM8960_ROUTMIX, 0x100, 0x100);
+	snd_soc_component_update_bits(component, WM8960_POWER3, 0xc, 0xc);
+	snd_soc_component_update_bits(component, WM8960_LOUT1, 0x7f, 0x7f);
+	snd_soc_component_update_bits(component, WM8960_ROUT1, 0x7f, 0x7f);
+	snd_soc_component_update_bits(component, WM8960_IFACE2, 0x40, 0x40);
+	snd_soc_component_update_bits(component, WM8960_MONOMIX2, 0x120, 0x120);
+	snd_soc_component_update_bits(component, WM8960_LINPATH, 0x1f8, 0x138);
+	snd_soc_component_update_bits(component, WM8960_LINVOL, 0x19f, 0x11f);
+	snd_soc_component_update_bits(component, WM8960_RINVOL, 0x19f, 0x11f);
+	snd_soc_component_update_bits(component, WM8960_LOUT2, 0x1ff, 0x1ff);
+	snd_soc_component_update_bits(component, WM8960_ROUT2, 0x1ff, 0x1ff);
+	snd_soc_component_update_bits(component, WM8960_CLASSD3, 0x1a, 0x12);
+	snd_soc_component_update_bits(component, WM8960_CLASSD1, 0xc0, 0xc0);
+	snd_soc_component_update_bits(component, WM8960_ADDCTL3, (1<<3), (1<<3)); 
+	snd_soc_component_update_bits(component, WM8960_ADDCTL2, 0x60, 0x40); 
+	snd_soc_component_update_bits(component, WM8960_ADDCTL4, 0x0c, 0x0c); 
+	snd_soc_component_update_bits(component, WM8960_CLASSD1, 0xc0, 0xc0); 
+	snd_soc_component_update_bits(component, WM8960_POWER2, 0x1fb, 0x1fb); 
+
+	/*
+	 * codec ADCLRC pin configured as GPIO, DACLRC pin is used as a frame
+	 * clock for ADCs and DACs
+	 */
+	snd_soc_component_update_bits(component, WM8960_IFACE2, 1<<6, 1<<6);
+
+	/* GPIO1 used as headphone detect output */
+	snd_soc_component_update_bits(component, WM8960_ADDCTL4, 7<<4, 3<<4);
+
+	/* Enable headphone jack detect */
+	snd_soc_component_update_bits(component, WM8960_ADDCTL2, 1<<6, 1<<6);
+	snd_soc_component_update_bits(component, WM8960_ADDCTL2, 1<<5, wm8960->hp_det[1]<<5);
+	snd_soc_component_update_bits(component, WM8960_ADDCTL4, 3<<2, wm8960->hp_det[0]<<2);
+	snd_soc_component_update_bits(component, WM8960_ADDCTL1, 3, 3);
+
 
 	snd_soc_add_component_controls(component, wm8960_snd_controls,
 				     ARRAY_SIZE(wm8960_snd_controls));
@@ -1415,13 +1484,17 @@ static int wm8960_i2c_probe(struct i2c_client *i2c,
 			      GFP_KERNEL);
 	if (wm8960 == NULL)
 		return -ENOMEM;
+	
+	of_property_read_u32_array(i2c->dev.of_node, "hp-det", wm8960->hp_det, 2);
+
+	//printk("%s %s %d,   \n", __FILE__, __FUNCTION__, __LINE__);
 
 	wm8960->mclk = devm_clk_get(&i2c->dev, "mclk");
 	if (IS_ERR(wm8960->mclk)) {
 		if (PTR_ERR(wm8960->mclk) == -EPROBE_DEFER)
 			return -EPROBE_DEFER;
 	}
-
+	//printk("%s %s %d,   \n", __FILE__, __FUNCTION__, __LINE__);
 	wm8960->regmap = devm_regmap_init_i2c(i2c, &wm8960_regmap);
 	if (IS_ERR(wm8960->regmap))
 		return PTR_ERR(wm8960->regmap);
@@ -1462,7 +1535,7 @@ static int wm8960_i2c_probe(struct i2c_client *i2c,
 	i2c_set_clientdata(i2c, wm8960);
 
 	ret = devm_snd_soc_register_component(&i2c->dev,
-			&soc_component_dev_wm8960, &wm8960_dai, 1);
+			&soc_component_dev_wm8960, wm8960_dai, ARRAY_SIZE(wm8960_dai));
 
 	return ret;
 }

@@ -30,6 +30,10 @@
 #include <linux/usb/typec_altmode.h>
 #include <linux/workqueue.h>
 
+static void tcpm_init(struct tcpm_port *port);
+static void _tcpm_cc_change(struct tcpm_port *port, enum typec_cc_status cc1,
+			    enum typec_cc_status cc2);
+
 #define FOREACH_STATE(S)			\
 	S(INVALID_STATE),			\
 	S(TOGGLING),			\
@@ -488,13 +492,13 @@ __printf(2, 3)
 static void tcpm_log(struct tcpm_port *port, const char *fmt, ...)
 {
 	va_list args;
-
+#if 0
 	/* Do not log while disconnected and unattached */
 	if (tcpm_port_is_disconnected(port) &&
 	    (port->state == SRC_UNATTACHED || port->state == SNK_UNATTACHED ||
 	     port->state == TOGGLING))
 		return;
-
+#endif
 	va_start(args, fmt);
 	_tcpm_log(port, fmt, args);
 	va_end(args);
@@ -2758,15 +2762,68 @@ static void tcpm_detach(struct tcpm_port *port)
 
 static void tcpm_src_detach(struct tcpm_port *port)
 {
-	tcpm_detach(port);
+	enum typec_cc_status cc1, cc2;
+
+	printk("%s %s %d\n", __FILE__, __FUNCTION__, __LINE__);
+	if (!port->attached)
+		return;
+
+	printk("%s %s %d\n", __FILE__, __FUNCTION__, __LINE__);
+
+	if (tcpm_port_is_disconnected(port))
+		port->hard_reset_count = 0;
+
+#if 1
+	printk("%s %s %d\n", __FILE__, __FUNCTION__, __LINE__);
+
+	//mutex_lock(&port->lock);
+	port->tcpc->init(port->tcpc);
+	tcpm_reset_port(port);
+	//mutex_unlock(&port->lock);
+
+	tcpm_set_roles(port, true, TYPEC_SINK, TYPEC_DEVICE);
+	
+#if 0
+	/*
+	 * XXX
+	 * Should possibly wait for VBUS to settle if it was enabled locally
+	 * since tcpm_reset_port() will disable VBUS.
+	 */
+	port->vbus_present = port->tcpc->get_vbus(port->tcpc);
+	if (port->vbus_present) {
+		printk("%s %s %d, port->vbus_never_low = true\n", __FILE__, __FUNCTION__, __LINE__);
+		//port->vbus_never_low = true;
+	}
+
+	tcpm_set_state(port, tcpm_default_state(port), 0);
+
+	if (port->tcpc->get_cc(port->tcpc, &cc1, &cc2) == 0) {
+		
+		printk("%s %s %d, _tcpm_cc_change(%d, %d)\n", __FILE__, __FUNCTION__, __LINE__, cc1, cc2);
+		_tcpm_cc_change(port, cc1, cc2);
+	}
+
+	/*
+	 * Some adapters need a clean slate at startup, and won't recover
+	 * otherwise. So do not try to be fancy and force a clean disconnect.
+	 */
+	tcpm_set_state(port, PORT_RESET, 0);
+	printk("%s %s %d\n", __FILE__, __FUNCTION__, __LINE__);
+#endif	
+#else
+	tcpm_reset_port(port); //tcpm_tcpc_reset(port);
+#endif	
 }
 
 static int tcpm_snk_attach(struct tcpm_port *port)
 {
 	int ret;
+	
+	printk("%s %s %d\n", __FILE__, __FUNCTION__, __LINE__);
 
 	if (port->attached)
 		return 0;
+	printk("%s %s %d\n", __FILE__, __FUNCTION__, __LINE__);
 
 	ret = tcpm_set_polarity(port, port->cc2 != TYPEC_CC_OPEN ?
 				TYPEC_POLARITY_CC2 : TYPEC_POLARITY_CC1);
@@ -2789,6 +2846,7 @@ static int tcpm_snk_attach(struct tcpm_port *port)
 
 static void tcpm_snk_detach(struct tcpm_port *port)
 {
+	printk("%s %s %d\n", __FILE__, __FUNCTION__, __LINE__);
 	tcpm_detach(port);
 }
 
@@ -2882,22 +2940,48 @@ static void run_state_machine(struct tcpm_port *port)
 	enum typec_pwr_opmode opmode;
 	unsigned int msecs;
 
+	printk("%s %s %d, port->state = %d, SRC_UNATTACHED = %d\n", __FILE__, __FUNCTION__, __LINE__, port->state, SRC_UNATTACHED);
+	
 	port->enter_state = port->state;
 	switch (port->state) {
 	case TOGGLING:
 		break;
 	/* SRC states */
 	case SRC_UNATTACHED:
-		if (!port->non_pd_role_swap)
+
+		printk("%s %s %d\n", __FILE__, __FUNCTION__, __LINE__);
+		tcpm_log(port, "%s %s %d", __FILE__, __FUNCTION__, __LINE__);
+		
+		if (!port->non_pd_role_swap) {
+			printk("%s %s %d\n", __FILE__, __FUNCTION__, __LINE__);
+			tcpm_log(port, "%s %s %d", __FILE__, __FUNCTION__, __LINE__);
 			tcpm_swap_complete(port, -ENOTCONN);
+		}
 		tcpm_src_detach(port);
+		printk("%s %s %d, SRC_UNATTACHED\n", __FILE__, __FUNCTION__, __LINE__);
+		tcpm_log(port, "%s %s %d", __FILE__, __FUNCTION__, __LINE__);
 		if (tcpm_start_toggling(port, tcpm_rp_cc(port))) {
+			printk("%s %s %d, TOGGLING\n", __FILE__, __FUNCTION__, __LINE__);
+			tcpm_log(port, "%s %s %d", __FILE__, __FUNCTION__, __LINE__);
 			tcpm_set_state(port, TOGGLING, 0);
+			tcpm_log(port, "tcpm_set_cc = TYPEC_CC_OPEN");
+			tcpm_set_cc(port, TYPEC_CC_OPEN);
+			
 			break;
 		}
+#if 0		
+		printk("%s %s %d, tcpm_set_cc\n", __FILE__, __FUNCTION__, __LINE__);
 		tcpm_set_cc(port, tcpm_rp_cc(port));
-		if (port->port_type == TYPEC_PORT_DRP)
-			tcpm_set_state(port, SNK_UNATTACHED, PD_T_DRP_SNK);
+		if (port->port_type == TYPEC_PORT_DRP) {
+			printk("%s %s %d, SNK_UNATTACHED\n", __FILE__, __FUNCTION__, __LINE__);
+			tcpm_set_state(port, SNK_UNATTACHED, PD_T_DRP_SNK);			
+		}
+#else
+		tcpm_log(port, "tcpm_set_cc = TYPEC_CC_OPEN");
+		tcpm_set_cc(port, TYPEC_CC_OPEN);
+		tcpm_set_state(port, TOGGLING, 0);
+
+#endif
 		break;
 	case SRC_ATTACH_WAIT:
 		if (tcpm_port_is_debug(port))
@@ -4353,6 +4437,8 @@ swap_unlock:
 static void tcpm_init(struct tcpm_port *port)
 {
 	enum typec_cc_status cc1, cc2;
+	
+	printk("%s %s %d\n", __FILE__, __FUNCTION__, __LINE__);
 
 	port->tcpc->init(port->tcpc);
 
@@ -4364,13 +4450,18 @@ static void tcpm_init(struct tcpm_port *port)
 	 * since tcpm_reset_port() will disable VBUS.
 	 */
 	port->vbus_present = port->tcpc->get_vbus(port->tcpc);
-	if (port->vbus_present)
-		port->vbus_never_low = true;
+	if (port->vbus_present) {
+		printk("%s %s %d, port->vbus_never_low = true\n", __FILE__, __FUNCTION__, __LINE__);
+		//port->vbus_never_low = true;
+	}
 
 	tcpm_set_state(port, tcpm_default_state(port), 0);
 
-	if (port->tcpc->get_cc(port->tcpc, &cc1, &cc2) == 0)
+	if (port->tcpc->get_cc(port->tcpc, &cc1, &cc2) == 0) {
+		
+		printk("%s %s %d, _tcpm_cc_change(%d, %d)\n", __FILE__, __FUNCTION__, __LINE__, cc1, cc2);
 		_tcpm_cc_change(port, cc1, cc2);
+	}
 
 	/*
 	 * Some adapters need a clean slate at startup, and won't recover
@@ -4409,9 +4500,12 @@ port_unlock:
 
 void tcpm_tcpc_reset(struct tcpm_port *port)
 {
+	printk("%s %s %d\n", __FILE__, __FUNCTION__, __LINE__);
 	mutex_lock(&port->lock);
 	/* XXX: Maintain PD connection if possible? */
+	printk("%s %s %d\n", __FILE__, __FUNCTION__, __LINE__);
 	tcpm_init(port);
+	printk("%s %s %d\n", __FILE__, __FUNCTION__, __LINE__);
 	mutex_unlock(&port->lock);
 }
 EXPORT_SYMBOL_GPL(tcpm_tcpc_reset);
@@ -4829,7 +4923,8 @@ struct tcpm_port *tcpm_register_port(struct device *dev, struct tcpc_dev *tcpc)
 	port->partner_desc.identity = &port->partner_ident;
 	port->port_type = port->typec_caps.type;
 
-	port->role_sw = usb_role_switch_get(port->dev);
+	//port->role_sw = usb_role_switch_get(port->dev);
+	port->role_sw = fwnode_usb_role_switch_get(tcpc->fwnode);
 	if (IS_ERR(port->role_sw)) {
 		err = PTR_ERR(port->role_sw);
 		goto out_destroy_wq;

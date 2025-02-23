@@ -127,10 +127,12 @@ struct usb_role_switch *usb_role_switch_get(struct device *dev)
 	struct usb_role_switch *sw;
 
 	sw = usb_role_switch_is_parent(dev_fwnode(dev));
+	printk("%s %s %d sw = 0x%x\n", __FILE__, __FUNCTION__, __LINE__, sw);
 	if (!sw)
 		sw = device_connection_find_match(dev, "usb-role-switch", NULL,
 						  usb_role_switch_match);
 
+	printk("%s %s %d sw = 0x%x\n", __FILE__, __FUNCTION__, __LINE__, sw);
 	if (!IS_ERR_OR_NULL(sw))
 		WARN_ON(!try_module_get(sw->dev.parent->driver->owner));
 

@@ -251,7 +251,7 @@ static int at803x_probe(struct phy_device *phydev)
 
 	phydev->priv = priv;
 
-	return 0;
+	return -ENOMEM;
 }
 
 static int at803x_config_init(struct phy_device *phydev)

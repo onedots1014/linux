@@ -39,6 +39,14 @@ config DRM_PANEL_SIMPLE
 	  that it can be automatically turned off when the panel goes into a
 	  low power state.
 
+config DRM_PANEL_MYIR070TFT
+    tristate "DRM_PANEL_MYIR070TFT panel"
+    depends on OF
+    select VIDEOMODE_HELPERS
+    help
+        Say Y here if you want to enable support for RGB video mode
+        The panel has a 800x480 resolution and uses
+
 config DRM_PANEL_FEIYANG_FY07024DI26A30D
 	tristate "Feiyang FY07024DI26A30-D MIPI-DSI LCD panel"
 	depends on OF

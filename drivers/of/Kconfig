@@ -100,6 +100,15 @@ config OF_OVERLAY
 	  While this option is selected automatically when needed, you can
 	  enable it manually to improve device tree unit test coverage.
 
+config OF_OVERLAYDTBO
+	bool "Device Tree overlays config"
+	select OF_DYNAMIC
+	select OF_FLATTREE
+	select OF_RESOLVE
+	help
+	  Overlays are a method to dynamically modify part of the kernel's
+	  device tree with dynamically loaded data.
+
 config OF_NUMA
 	bool
 

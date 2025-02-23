@@ -606,7 +606,7 @@ struct phy_device *phy_device_create(struct mii_bus *bus, int addr, u32 phy_id,
 	dev->pause = 0;
 	dev->asym_pause = 0;
 	dev->link = 0;
-	dev->interface = PHY_INTERFACE_MODE_GMII;
+	dev->interface = PHY_INTERFACE_MODE_GMII;   
 
 	dev->autoneg = AUTONEG_ENABLE;
 
@@ -807,6 +807,83 @@ static int get_phy_id(struct mii_bus *bus, int addr, u32 *phy_id,
 	return 0;
 }
 
+
+#define REG_DEBUG_ADDR_OFFSET		0x1e
+#define REG_DEBUG_DATA			0x1f
+
+static int ytphy_mii_rd_ext(struct mii_bus *bus, int phy_id, u32 regnum)
+{
+	int ret;
+	int val;
+
+	ret = bus->write(bus, phy_id, REG_DEBUG_ADDR_OFFSET, regnum);
+	if (ret < 0)
+		return ret;
+
+	val = bus->read(bus, phy_id, REG_DEBUG_DATA);
+
+	return val;
+}
+
+static int ytphy_mii_wr_ext(struct mii_bus *bus, int phy_id, u32 regnum, u16 val)
+{
+	int ret;
+
+	ret = bus->write(bus, phy_id, REG_DEBUG_ADDR_OFFSET, regnum);
+	if (ret < 0)
+		return ret;
+
+	ret = bus->write(bus, phy_id, REG_DEBUG_DATA, val);
+
+	return ret;
+}
+
+int yt8511_config_out_125m(struct mii_bus *bus, int phy_id)
+{
+	int ret;
+	int val;
+	//int debug;
+	int rett;
+
+	/* disable auto sleep */
+	val = ytphy_mii_rd_ext(bus, phy_id, 0x27);
+	if (val < 0)
+	        return val;
+
+	val &= (~BIT(15));
+
+	ret = ytphy_mii_wr_ext(bus, phy_id, 0x27, val);
+	if (ret < 0)
+	        return ret;
+
+	/* enable RXC clock when no wire plug */
+	val = ytphy_mii_rd_ext(bus, phy_id, 0xc);
+	if (val < 0)
+	        return val;
+
+	val |= (3 << 1);
+	val |= (1 << 0);
+
+	/*  config rx_delay
+	debug = ytphy_mii_rd_ext(bus,phy_id,0x1e);
+	printk("debug = %x\n",debug);  //0x300  700 F00 
+	debug |= (0xf << 8);
+	debug |= (1 << 12);   //1F00
+	printk("debug = %x\n",debug);
+	debug = ytphy_mii_wr_ext(bus,phy_id,0x1e,debug);
+	debug = ytphy_mii_rd_ext(bus,phy_id,0x1e);
+	printk("debug = %x\n",debug); 
+	*/
+
+	ret = ytphy_mii_wr_ext(bus, phy_id, 0xc, val);
+	printk("yt8511_config_out_125m, phy clk out, val=%#08x\n",val);
+
+	rett = ytphy_mii_rd_ext(bus, phy_id, 0xc);
+
+    return ret;
+}
+
+
 /**
  * get_phy_device - reads the specified PHY device and returns its @phy_device
  *		    struct
@@ -833,6 +910,29 @@ struct phy_device *get_phy_device(struct mii_bus *bus, int addr, bool is_c45)
 	/* If the phy_id is mostly Fs, there is no device there */
 	if ((phy_id & 0x1fffffff) == 0x1fffffff)
 		return ERR_PTR(-ENODEV);
+
+	/* config 125M for YT8511 */
+	if(0x10a == phy_id)
+	{
+
+		#if 0
+			r = yt8511_config_dis_txdelay(bus, addr);
+			printk (KERN_INFO "yzhang..8511 dis txdelay, reg=%#04x\n",bus->read(bus,addr,0x1f)/*double check as delay*/);
+			if (r<0)
+			{
+				printk (KERN_INFO "yzhang..failed to dis txdelay, ret=%d\n",r);
+			}
+		#endif
+
+			printk (KERN_INFO "yzhang..get YT8511, abt to set 125m clk out, phyaddr=%d, phyid=%08x\n",addr, phy_id);
+			r = yt8511_config_out_125m(bus, addr);
+			printk (KERN_INFO "yzhang..8511 set 125m clk out, reg=%#04x\n",bus->read(bus,addr,0x1f)/*double check as delay*/);
+			if (r<0)
+			{
+				printk (KERN_INFO "yzhang..failed to set 125m clk out, ret=%d\n",r);
+			}
+
+	}
 
 	return phy_device_create(bus, addr, phy_id, is_c45, &c45_ids);
 }
@@ -960,6 +1060,7 @@ int phy_connect_direct(struct net_device *dev, struct phy_device *phydev,
 
 	if (!dev)
 		return -EINVAL;
+
 
 	rc = phy_attach_direct(dev, phydev, phydev->dev_flags, interface);
 	if (rc)
@@ -1575,6 +1676,7 @@ EXPORT_SYMBOL(phy_reset_after_clk_enable);
  */
 static int genphy_config_advert(struct phy_device *phydev)
 {
+	
 	int err, bmsr, changed = 0;
 	u32 adv;
 
@@ -1602,20 +1704,43 @@ static int genphy_config_advert(struct phy_device *phydev)
 	 * 1000Mbits/sec capable PHYs shall have the BMSR_ESTATEN bit set to a
 	 * logical 1.
 	 */
-	if (!(bmsr & BMSR_ESTATEN))
+	if (!(bmsr & BMSR_ESTATEN))   //0x0100 
 		return changed;
+	
+	#if 0        //belongs to YT8511
+	reg4_pause = phy_read(phydev,0x4);   //turn off pause symmetry and flow control
+	printk("reg4_pause = %x\n",reg4_pause);  
+	reg4_pause &= ~(3 << 10);
+	printk("reg4_pause = %x\n",reg4_pause); 
+	phy_write(phydev,0x4,reg4_pause);
 
-	adv = linkmode_adv_to_mii_ctrl1000_t(phydev->advertising);
+	reg4_pause = phy_read(phydev,0x4);
+	printk("reg4_pause = %x\n",reg4_pause);
 
-	err = phy_modify_changed(phydev, MII_CTRL1000,
+   	speed_reg = phy_read(phydev,0x14);    //add new-----082c
+	//speed_reg &= ~(1 << 5); 
+	//speed_reg |= (7 << 2); 
+	speed_reg |= (1 << 4); 
+	printk("speed_reg = %x\n",speed_reg);  // 080c  shutdown speed reduced
+	phy_write(phydev,0x14,speed_reg);
+	rett = phy_read(phydev,0x14); 
+	printk("speed_reg = %x\n",rett);   
+	#endif
+	
+	adv = linkmode_adv_to_mii_ctrl1000_t(phydev->advertising);   //0x0200 
+		//printk("adv = %x\n",adv);
+
+	err = phy_modify_changed(phydev, MII_CTRL1000,       
 				 ADVERTISE_1000FULL | ADVERTISE_1000HALF,
-				 adv);
+				 adv);	
+
 	if (err < 0)
 		return err;
 	if (err > 0)
 		changed = 1;
 
-	return changed;
+	return changed;   //0
+
 }
 
 /**
@@ -1626,6 +1751,7 @@ static int genphy_config_advert(struct phy_device *phydev)
  *   efficent ethernet modes. Returns 0 if the PHY's advertisement hasn't
  *   changed, and 1 if it has changed.
  */
+
 int genphy_config_eee_advert(struct phy_device *phydev)
 {
 	int err;
@@ -1651,6 +1777,7 @@ EXPORT_SYMBOL(genphy_config_eee_advert);
  */
 int genphy_setup_forced(struct phy_device *phydev)
 {
+
 	u16 ctl = 0;
 
 	phydev->pause = 0;
@@ -1666,6 +1793,7 @@ int genphy_setup_forced(struct phy_device *phydev)
 
 	return phy_modify(phydev, MII_BMCR,
 			  ~(BMCR_LOOPBACK | BMCR_ISOLATE | BMCR_PDOWN), ctl);
+
 }
 EXPORT_SYMBOL(genphy_setup_forced);
 
@@ -1675,9 +1803,25 @@ EXPORT_SYMBOL(genphy_setup_forced);
  */
 int genphy_restart_aneg(struct phy_device *phydev)
 {
+	#if 0
 	/* Don't isolate the PHY if we're negotiating */
 	return phy_modify(phydev, MII_BMCR, BMCR_ISOLATE,
 			  BMCR_ANENABLE | BMCR_ANRESTART);
+			  #endif
+
+	int ctl = phy_read(phydev, MII_BMCR);   //add as follow
+
+	if (ctl < 0)
+		return ctl;
+
+	ctl |= BMCR_ANENABLE | BMCR_ANRESTART;
+
+	/* Don't isolate the PHY if we're negotiating */
+	ctl &= ~BMCR_ISOLATE;
+
+	return phy_write(phydev, MII_BMCR, ctl);
+	
+
 }
 EXPORT_SYMBOL(genphy_restart_aneg);
 
@@ -1692,37 +1836,61 @@ EXPORT_SYMBOL(genphy_restart_aneg);
  */
 int __genphy_config_aneg(struct phy_device *phydev, bool changed)
 {
+	
 	int err;
+	int ctl ;
+	//int ret;   //add
 
 	if (genphy_config_eee_advert(phydev))
+	{
 		changed = true;
+	}
 
 	if (AUTONEG_ENABLE != phydev->autoneg)
+	{
+		printk("phydev->autoneg = %d\n",phydev->autoneg);
 		return genphy_setup_forced(phydev);
+	}
 
 	err = genphy_config_advert(phydev);
+
 	if (err < 0) /* error */
 		return err;
 	else if (err)
+	{
 		changed = true;
 
-	if (!changed) {
+	}
+
+	//if (!changed)   //delete
+	if(err == 0)
+	{
 		/* Advertisement hasn't changed, but maybe aneg was never on to
 		 * begin with?  Or maybe phy was isolated?
-		 */
-		int ctl = phy_read(phydev, MII_BMCR);
+		 */	
+		 ctl = phy_read(phydev, MII_BMCR);
 
 		if (ctl < 0)
 			return ctl;
 
-		if (!(ctl & BMCR_ANENABLE) || (ctl & BMCR_ISOLATE))
-			changed = true; /* do restart aneg */
+		if (!(ctl & BMCR_ANENABLE) || (ctl & BMCR_ISOLATE))   //(1140 & 0100) || (1140 & 0x0400)  delete
+			//changed = true; /* do restart aneg */
+			  err = 1;  //add
 	}
 
 	/* Only restart aneg if we are advertising something different
 	 * than we were before.
 	 */
-	return changed ? genphy_restart_aneg(phydev) : 0;
+	// return changed ? genphy_restart_aneg(phydev) : 0;     //delete
+	//genphy_restart_aneg(phydev);  
+
+	if(err > 0)
+	{
+		err = genphy_restart_aneg(phydev);
+	}
+
+	return err;
+
 }
 EXPORT_SYMBOL(__genphy_config_aneg);
 
@@ -1755,13 +1923,14 @@ int genphy_update_link(struct phy_device *phydev)
 	int status = 0, bmcr;
 
 	bmcr = phy_read(phydev, MII_BMCR);
+
 	if (bmcr < 0)
 		return bmcr;
 
 	/* Autoneg is being started, therefore disregard BMSR value and
 	 * report link as down.
 	 */
-	if (bmcr & BMCR_ANRESTART)
+	if (bmcr & BMCR_ANRESTART)   //0x0200	/* Auto negotiation restart    */
 		goto done;
 
 	/* The link state is latched low so that momentary link
@@ -1779,6 +1948,7 @@ int genphy_update_link(struct phy_device *phydev)
 
 	/* Read link and autonegotiation status */
 	status = phy_read(phydev, MII_BMSR);
+	//printk("status0 = %x\n",status);   //796d
 	if (status < 0)
 		return status;
 done:
@@ -1797,7 +1967,10 @@ EXPORT_SYMBOL(genphy_update_link);
 
 int genphy_read_lpa(struct phy_device *phydev)
 {
+
 	int lpa, lpagb;
+	int ret;   //add
+	int reg_11;
 
 	if (phydev->autoneg == AUTONEG_ENABLE) {
 		if (!phydev->autoneg_complete) {
@@ -1808,11 +1981,15 @@ int genphy_read_lpa(struct phy_device *phydev)
 		}
 
 		if (phydev->is_gigabit_capable) {
-			lpagb = phy_read(phydev, MII_STAT1000);
+			lpagb = phy_read(phydev, MII_STAT1000);   //0
 			if (lpagb < 0)
 				return lpagb;
 
-			if (lpagb & LPA_1000MSFAIL) {
+			reg_11 = phy_read(phydev,0x11);
+
+			 ret = phy_read(phydev, MII_CTRL1000);
+
+			if (lpagb & LPA_1000MSFAIL) {   //0x8000
 				int adv = phy_read(phydev, MII_CTRL1000);
 
 				if (adv < 0)
@@ -1827,18 +2004,26 @@ int genphy_read_lpa(struct phy_device *phydev)
 
 			mii_stat1000_mod_linkmode_lpa_t(phydev->lp_advertising,
 							lpagb);
-		}
 
-		lpa = phy_read(phydev, MII_LPA);
+		}
+	
+		//add as follow
+		lpa = phy_read(phydev, MII_LPA);  //0x05	
 		if (lpa < 0)
 			return lpa;
 
 		mii_lpa_mod_linkmode_lpa_t(phydev->lp_advertising, lpa);
-	} else {
+	} 
+
+	else {
 		linkmode_zero(phydev->lp_advertising);
 	}
 
 	return 0;
+
+
+
+
 }
 EXPORT_SYMBOL(genphy_read_lpa);
 
@@ -1854,6 +2039,7 @@ EXPORT_SYMBOL(genphy_read_lpa);
 int genphy_read_status(struct phy_device *phydev)
 {
 	int err, old_link = phydev->link;
+	int lpagb;  //add new-----
 
 	/* Update the link, but return if there was an error */
 	err = genphy_update_link(phydev);
@@ -1864,8 +2050,8 @@ int genphy_read_status(struct phy_device *phydev)
 	if (phydev->autoneg == AUTONEG_ENABLE && old_link && phydev->link)
 		return 0;
 
-	phydev->speed = SPEED_UNKNOWN;
-	phydev->duplex = DUPLEX_UNKNOWN;
+	phydev->speed = SPEED_UNKNOWN;    
+	phydev->duplex = DUPLEX_UNKNOWN;  
 	phydev->pause = 0;
 	phydev->asym_pause = 0;
 
@@ -1874,7 +2060,10 @@ int genphy_read_status(struct phy_device *phydev)
 		return err;
 
 	if (phydev->autoneg == AUTONEG_ENABLE && phydev->autoneg_complete) {
-		phy_resolve_aneg_linkmode(phydev);
+		phy_resolve_aneg_linkmode(phydev);  
+
+		lpagb = phy_read(phydev, MII_STAT1000);  
+
 	} else if (phydev->autoneg == AUTONEG_DISABLE) {
 		int bmcr = phy_read(phydev, MII_BMCR);
 
@@ -1909,8 +2098,8 @@ EXPORT_SYMBOL(genphy_read_status);
  */
 int genphy_soft_reset(struct phy_device *phydev)
 {
-	u16 res = BMCR_RESET;
-	int ret;
+	u16 res = BMCR_RESET;    //0x8000
+	int ret; 
 
 	if (phydev->autoneg == AUTONEG_ENABLE)
 		res |= BMCR_ANRESTART;
@@ -1948,7 +2137,7 @@ int genphy_read_abilities(struct phy_device *phydev)
 			       ARRAY_SIZE(phy_basic_ports_array),
 			       phydev->supported);
 
-	val = phy_read(phydev, MII_BMSR);
+	val = phy_read(phydev, MII_BMSR);   //796d
 	if (val < 0)
 		return val;
 
@@ -1964,13 +2153,13 @@ int genphy_read_abilities(struct phy_device *phydev)
 	linkmode_mod_bit(ETHTOOL_LINK_MODE_10baseT_Half_BIT, phydev->supported,
 			 val & BMSR_10HALF);
 
-	if (val & BMSR_ESTATEN) {
-		val = phy_read(phydev, MII_ESTATUS);
+	if (val & BMSR_ESTATEN) {       //0x0100
+		val = phy_read(phydev, MII_ESTATUS);  //0x0f	
 		if (val < 0)
 			return val;
 
 		linkmode_mod_bit(ETHTOOL_LINK_MODE_1000baseT_Full_BIT,
-				 phydev->supported, val & ESTATUS_1000_TFULL);
+				 phydev->supported, val & ESTATUS_1000_TFULL);  //0x2000
 		linkmode_mod_bit(ETHTOOL_LINK_MODE_1000baseT_Half_BIT,
 				 phydev->supported, val & ESTATUS_1000_THALF);
 		linkmode_mod_bit(ETHTOOL_LINK_MODE_1000baseX_Full_BIT,

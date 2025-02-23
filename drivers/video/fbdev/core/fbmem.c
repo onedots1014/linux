@@ -1640,14 +1640,6 @@ static int do_register_framebuffer(struct fb_info *fb_info)
 	fb_add_videomode(&mode, &fb_info->modelist);
 	registered_fb[i] = fb_info;
 
-#ifdef CONFIG_GUMSTIX_AM200EPD
-	{
-		struct fb_event event;
-		event.info = fb_info;
-		fb_notifier_call_chain(FB_EVENT_FB_REGISTERED, &event);
-	}
-#endif
-
 	if (!lockless_register_fb)
 		console_lock();
 	else
@@ -1660,6 +1652,17 @@ static int do_register_framebuffer(struct fb_info *fb_info)
 		console_unlock();
 	else
 		atomic_dec(&ignore_console_lock_warning);
+
+  #if defined(CONFIG_GUMSTIX_AM200EPD) || \
+                  defined(CONFIG_DRM_PANEL_MYIR070TFT)
+
+          {
+                  struct fb_event event;
+                  event.info = fb_info;
+                  fb_notifier_call_chain(FB_EVENT_FB_REGISTERED, &event);
+          }
+  #endif
+
 	return ret;
 }
 
@@ -1708,7 +1711,8 @@ static void do_unregister_framebuffer(struct fb_info *fb_info)
 	registered_fb[fb_info->node] = NULL;
 	num_registered_fb--;
 	fb_cleanup_device(fb_info);
-#ifdef CONFIG_GUMSTIX_AM200EPD
+#if defined(CONFIG_GUMSTIX_AM200EPD) || \
+			defined(CONFIG_DRM_PANEL_MYIR070TFT)
 	{
 		struct fb_event event;
 		event.info = fb_info;

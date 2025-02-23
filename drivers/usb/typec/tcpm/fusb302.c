@@ -605,6 +605,7 @@ static int tcpm_set_cc(struct tcpc_dev *dev, enum typec_cc_status cc)
 	u8 rd_mda, switches0_data = 0x00;
 	int ret = 0;
 
+	fusb302_log(chip, "%s %s %d cc = 0x%x\n", cc);
 	mutex_lock(&chip->lock);
 	switch (cc) {
 	case TYPEC_CC_OPEN:
@@ -719,8 +720,50 @@ static int tcpm_get_cc(struct tcpc_dev *dev, enum typec_cc_status *cc1,
 static int tcpm_set_polarity(struct tcpc_dev *dev,
 			     enum typec_cc_polarity polarity)
 {
-	return 0;
+#if 0
+   struct fusb302_chip *chip = container_of(dev, struct fusb302_chip,
+						tcpc_dev);
+   u8 val = 0;
+
+   if (chip->vconn_on) {
+	   if (polarity)
+		   val |= FUSB_REG_SWITCHES0_VCONN_CC1;
+	   else
+		   val |= FUSB_REG_SWITCHES0_VCONN_CC2;
+   }
+
+   if (chip->toggling_mode == TOGGLING_MODE_SNK) {
+	   if (polarity == TYPEC_POLARITY_CC1)
+		   val |= FUSB_REG_SWITCHES0_MEAS_CC1;
+	   else
+		   val |= FUSB_REG_SWITCHES0_MEAS_CC2;
+   } else {
+	   if (polarity == TYPEC_POLARITY_CC1)
+		   val |= FUSB_REG_SWITCHES0_MEAS_CC1 | FUSB_REG_SWITCHES0_CC1_PU_EN;
+	   else
+		   val |= FUSB_REG_SWITCHES0_MEAS_CC2 | FUSB_REG_SWITCHES0_CC2_PU_EN;
+   }
+
+   fusb302_i2c_mask_write(chip, FUSB_REG_SWITCHES0,
+			  FUSB_REG_SWITCHES0_VCONN_CC1 | FUSB_REG_SWITCHES0_VCONN_CC2 |
+			  FUSB_REG_SWITCHES0_MEAS_CC1  | FUSB_REG_SWITCHES0_MEAS_CC2 |
+			  FUSB_REG_SWITCHES0_CC1_PU_EN | FUSB_REG_SWITCHES0_CC2_PU_EN,
+			  val);
+
+   val = 0;
+   if (polarity == TYPEC_POLARITY_CC1)
+	   val |= FUSB_REG_SWITCHES1_TXCC1_EN;
+   else
+	   val |= FUSB_REG_SWITCHES1_TXCC2_EN;
+   fusb302_i2c_mask_write(chip, FUSB_REG_SWITCHES1,
+			  FUSB_REG_SWITCHES1_TXCC1_EN | FUSB_REG_SWITCHES1_TXCC2_EN,
+			  val);
+
+   chip->cc_polarity = polarity;
+#endif
+   return 0;
 }
+
 
 static int tcpm_set_vconn(struct tcpc_dev *dev, bool on)
 {

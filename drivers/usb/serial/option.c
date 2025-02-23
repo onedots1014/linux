@@ -589,6 +589,10 @@ static void option_instat_callback(struct urb *urb);
 
 
 static const struct usb_device_id option_ids[] = {
+	/*ML302*/
+	{ USB_DEVICE_AND_INTERFACE_INFO(0x1782, 0x4d10, 0xff, 0, 0) }, /*Eight Serials */
+	{ USB_DEVICE_AND_INTERFACE_INFO(0x1782, 0x4d11, 0xff, 0, 0) }, /*netdev and four serials */
+	{ USB_DEVICE_AND_INTERFACE_INFO(0x1782, 0x4d11, 0xff, 0, 0) },/*diag device*/
 	{ USB_DEVICE(OPTION_VENDOR_ID, OPTION_PRODUCT_COLT) },
 	{ USB_DEVICE(OPTION_VENDOR_ID, OPTION_PRODUCT_RICOLA) },
 	{ USB_DEVICE(OPTION_VENDOR_ID, OPTION_PRODUCT_RICOLA_LIGHT) },
