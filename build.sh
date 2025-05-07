@@ -48,6 +48,6 @@ for item in "$BOOT_DIR"/*; do
         mcopy -i "$BOOTFS_IMG" "$item" ::/
     fi
 done
-
+rm $BOOT_DIR/uImage
 echo "✅ bootfs.ext4 已生成于：$BOOTFS_IMG"
 
