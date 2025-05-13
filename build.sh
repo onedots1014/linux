@@ -28,10 +28,10 @@ echo "🚀 [2/4] 编译 uImage 和设备树..."
 make uImage LOADADDR=$LOADADDR -j$(nproc)
 make dtbs -j$(nproc)
 
-echo "📁 [3/4] 拷贝 uImage 和 dtb 到 boot 目录..."
+echo "📁 [3/4] 拷贝 uImage 和必要的 dtb 到 boot 目录..."
 cp $BUILD_DIR/uImage $BOOT_DIR/
-find $DTB_DIR -name "*.dtb" -exec cp {} $BOOT_DIR/ \;
-
+# cp $DTB_DIR/stm32mp157c-100ask-512d-lcd-v1.dtb $BOOT_DIR/
+cp $DTB_DIR/stm32mp157c-onedots-512d-v1.dtb $BOOT_DIR/
 echo "🧰 [4/4] 创建 bootfs.ext4 镜像（无需 sudo）..."
 
 # 创建空的 FAT 镜像

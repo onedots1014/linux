@@ -1,0 +1,35 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR BSD-3-Clause)
+/*
+* Copyright (C) 100ASK 2020 - All Rights Reserved
+* Author: 100ask
+* support: weidongshan@qq.com
+*/
+
+/dts-v1/;
+
+#include "stm32mp157.dtsi"
+#include "stm32mp15xa.dtsi" 
+#include "stm32mp157-100ask-pinctrl.dtsi"
+#include "stm32mp15xxac-pinctrl.dtsi"
+#include "stm32mp15xx-onedots.dtsi"
+
+/ {
+	model = "Onedots www.onedots.com.cn";
+	compatible = "st,stm32mp157c-onedots-512d-v1", "st,stm32mp157";
+
+	aliases {
+		serial0 = &uart4; //debug
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	reserved-memory {
+		gpu_reserved: gpu@da000000 {
+			reg = <0xda000000 0x4000000>;
+			no-map;
+		};
+	};	
+
+};

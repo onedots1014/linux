@@ -1045,7 +1045,8 @@ dtb-$(CONFIG_ARCH_STM32) += \
 	stm32mp157c-100ask-512d-lcd-v1.dtb \
 	100ask-stm32mp157c-pro-hdmi.dtb \
 	100ask-stm32mp157c-pro-lcd.dtb \
-	100ask-stm32mp157c-pro.dtb
+	100ask-stm32mp157c-pro.dtb \
+	stm32mp157c-onedots-512d-v1.dtb
 
 dtb-$(CONFIG_MACH_SUN4I) += \
 	sun4i-a10-a1000.dtb \
