@@ -5,7 +5,7 @@ export ARCH=arm
 export CROSS_COMPILE=arm-linux-gnueabi-
 
 # 配置项
-KERNEL_DEFCONFIG=onedots_stm32mp157_pro_defconfig
+KERNEL_DEFCONFIG=onedots_stm32mp157c_defconfig
 LOADADDR=0xC2000040
 
 OUTPUT_DIR="../output"
