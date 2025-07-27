@@ -140,7 +140,7 @@
 #endif
 		.endm
 
-		.section ".start", #alloc, #execinstr
+		.section ".start", "ax", %progbits
 /*
  * sort out different calling conventions
  */
