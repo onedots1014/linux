@@ -7,10 +7,8 @@
 
 /dts-v1/;
 
-#include "stm32mp157.dtsi"
-#include "stm32mp15xa.dtsi"
+#include "stm32mp157-onedots.dtsi"
 #include "stm32mp157-onedots-pinctrl.dtsi"
-#include "stm32mp15xxac-pinctrl.dtsi"
 #include "stm32mp15xx-onedots.dtsi"
 
 / {
@@ -24,12 +22,5 @@
 	chosen {
 		stdout-path = "serial0:115200n8";
 	};
-
-	reserved-memory {
-		gpu_reserved: gpu@da000000 {
-			reg = <0xda000000 0x4000000>;
-			no-map;
-		};
-	};	
 
 };
