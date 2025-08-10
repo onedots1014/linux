@@ -14,7 +14,8 @@
 / {
 	model = "Onedots www.onedots.com.cn";
 	compatible = "st,stm32mp157c-onedots-512d-v1", "st,stm32mp157";
-
+  // 指定封装类型以消除警告
+    st,package = <STM32MP_PKG_AC>;  // 根据你的实际芯片选择
 	aliases {
 		serial0 = &uart4; //debug
 	};

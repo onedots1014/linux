@@ -37,3 +37,7 @@
 	};
 };
 
+// 启用需要的 GPIO banks
+&gpioa { status = "okay"; };
+&gpiog { status = "okay"; };
+&pinctrl_z { status = "disabled"; };

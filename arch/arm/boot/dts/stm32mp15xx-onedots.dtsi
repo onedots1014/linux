@@ -118,25 +118,6 @@
 			 };
 		};
 	
-
-	led1 {
-        	compatible = "my,gpio-leds";
-        	blue {
-        		label = "heartbeat";
-        		gpios = <&gpioa 10 GPIO_ACTIVE_HIGH>;
-        		linux,default-trigger = "heartbeat";
-        		default-state = "off";
-				status = "disabled";
-        	};
-            red {
-                label = "red";
-                gpios = <&gpiog 8 GPIO_ACTIVE_HIGH>;
-                linux,default-trigger = "none";
-                status = "okay";
-            };
-
-	};
-
 };
 
 &cpu0{
