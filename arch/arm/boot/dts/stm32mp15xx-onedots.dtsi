@@ -5,11 +5,15 @@
  */
 
 / {
+		// 添加别名节点来固定设备映射
+	aliases {
+		mmc1 = &sdmmc2;  // eMMC (你的主要存储)
+		serial0 = &uart4;
+	};
 	memory@c0000000 {
 		device_type = "memory";
 		reg = <0xc0000000 0x20000000>;
 	};
-
 
 	regulators {
 			compatible = "regulator-gpio";
@@ -116,8 +120,7 @@
 				//interrupts = <IT_OCP_SWOUT 0>;
 				regulator-active-discharge = <1>;
 			 };
-		};
-	
+	};
 };
 
 &cpu0{
@@ -141,4 +144,21 @@
 		reg = <0x50000 0x10000>;
 		pool;
 	};
+};
+
+/*emmc*/
+&sdmmc2 {
+        pinctrl-names = "default", "opendrain", "sleep";
+        pinctrl-0 = <&sdmmc2_b4_pins_a &sdmmc2_d47_pins_a>;
+        pinctrl-1 = <&sdmmc2_b4_od_pins_a &sdmmc2_d47_pins_a>;
+        pinctrl-2 = <&sdmmc2_b4_sleep_pins_a &sdmmc2_d47_sleep_pins_a>;
+        non-removable;
+        no-sd;
+        no-sdio;
+        st,dirpol;
+        st,negedge;
+        bus-width = <8>;
+        vmmc-supply = <&vmmc>;
+        vqmmc-supply = <&vmmc>;
+        status = "okay";
 };
