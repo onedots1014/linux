@@ -455,51 +455,59 @@
 			};
 		};
 
-		pinctrl_z: pin-controller-z@54004000 {
-			#address-cells = <1>;
-			#size-cells = <1>;
-			compatible = "st,stm32mp157-z-pinctrl";
-			ranges = <0 0x54004000 0x400>;
-			pins-are-numbered;
-			interrupt-parent = <&exti>;
-			st,syscfg = <&exti 0x60 0xff>;
-			hwlocks = <&hsem 0 1>;
+	pinctrl_z: pin-controller-z@54004000 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "st,stm32mp157-z-pinctrl";
+		ranges = <0 0x54004000 0x400>;
+		pins-are-numbered;
+		interrupt-parent = <&exti>;
+		st,syscfg = <&exti 0x60 0xff>;
+		hwlocks = <&hsem 0 1>;
 
-			gpioz: gpio@54004000 {
-				gpio-controller;
-				#gpio-cells = <2>;
-				interrupt-controller;
-				#interrupt-cells = <2>;
-				reg = <0 0x400>;
-				clocks = <&scmi0_clk CK_SCMI0_GPIOZ>;
-				st,bank-name = "GPIOZ";
-				st,bank-ioport = <11>;
-				status = "disabled";
-			};
+		gpioz: gpio@54004000 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			reg = <0 0x400>;
+			clocks = <&scmi0_clk CK_SCMI0_GPIOZ>;
+			st,bank-name = "GPIOZ";
+			st,bank-ioport = <11>;
+			status = "disabled";
 		};
+	};
 
-vmmc: fixedregulator@2 {
+	vmmc: fixedregulator@2 {
 		compatible = "regulator-fixed";
 		regulator-name = "vmmc";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		startup-delay-us = <70000>;
 			enable-active-high;
-};
+	};
 
-		sdmmc2: sdmmc@58007000 {
-			compatible = "arm,pl18x", "arm,primecell";
-			arm,primecell-periphid = <0x00253180>;
-			reg = <0x58007000 0x1000>, <0x58008000 0x1000>;
-			interrupts = <GIC_SPI 124 IRQ_TYPE_LEVEL_HIGH>;
-			interrupt-names = "cmd_irq";
-			clocks = <&rcc SDMMC2_K>;
-			clock-names = "apb_pclk";
-			resets = <&rcc SDMMC2_R>;
-			cap-sd-highspeed;
-			cap-mmc-highspeed;
-			max-frequency = <120000000>;
+	sdmmc2: sdmmc@58007000 {
+		compatible = "arm,pl18x", "arm,primecell";
+		arm,primecell-periphid = <0x00253180>;
+		reg = <0x58007000 0x1000>, <0x58008000 0x1000>;
+		interrupts = <GIC_SPI 124 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "cmd_irq";
+		clocks = <&rcc SDMMC2_K>;
+		clock-names = "apb_pclk";
+		resets = <&rcc SDMMC2_R>;
+		cap-sd-highspeed;
+		cap-mmc-highspeed;
+		max-frequency = <120000000>;
+		status = "disabled";
+	};
+
+			iwdg2: watchdog@5a002000 {
+			compatible = "st,stm32mp1-iwdg";
+			reg = <0x5a002000 0x400>;
+			clocks = <&rcc IWDG2>, <&scmi0_clk CK_SCMI0_LSI>;
+			clock-names = "pclk", "lsi";
 			status = "disabled";
 		};
-	};
+};
 };

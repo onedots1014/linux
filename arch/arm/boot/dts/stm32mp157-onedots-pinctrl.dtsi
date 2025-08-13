@@ -166,3 +166,8 @@
 &gpiof { status = "okay"; };
 &gpiog { status = "okay"; };
 &pinctrl_z { status = "disabled"; };
+
+&iwdg2 {
+    timeout-sec = <32>;  /* 32秒超时 */
+    status = "okay";
+};
