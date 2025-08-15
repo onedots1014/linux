@@ -9,19 +9,20 @@
 
 #include "stm32mp157-onedots.dtsi"
 #include "stm32mp157-onedots-pinctrl.dtsi"
-#include "stm32mp15xx-onedots.dtsi"
+#include "stm32mp157-onedots-board.dtsi"
 
 / {
-	model = "Onedots www.onedots.com.cn";
+	model = "Onedots STM32MP157C Development Board";
 	compatible = "st,stm32mp157c-onedots-512d-v1", "st,stm32mp157";
-  // 指定封装类型以消除警告
-    st,package = <STM32MP_PKG_AC>;  // 根据你的实际芯片选择
+	
+	/* Package type specification to eliminate warnings */
+	st,package = <STM32MP_PKG_AC>;
+	
 	aliases {
-		serial0 = &uart4; //debug
+		serial0 = &uart4; /* Debug console */
 	};
 
 	chosen {
 		stdout-path = "serial0:115200n8";
 	};
-
 };

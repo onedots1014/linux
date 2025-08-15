@@ -54,9 +54,6 @@
 			reg = <0 0x80>;
 		};
 
-		scmi1_shm: scmi_shm@200 {
-			reg = <0x200 0x80>;
-		};
 	};
 
 	scmi0_mbox: mailbox-0 {
@@ -65,11 +62,6 @@
 		arm,func-id = <0x82002000>;
 	};
 
-	scmi1_mbox: mailbox-1 {
-		#mbox-cells = <0>;
-		compatible = "arm,smc-mbox";
-		arm,func-id = <0x82002001>;
-	};
 
 	firmware {
 		scmi0: scmi-0 {
@@ -91,21 +83,6 @@
 			};
 		};
 
-		scmi1: scmi-1 {
-			compatible = "arm,scmi";
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			status = "disabled";
-			mboxes = <&scmi1_mbox 0>;
-			mbox-names = "txrx";
-			shmem = <&scmi1_shm>;
-
-			scmi1_clk: protocol@14 {
-				reg = <0x14>;
-				#clock-cells = <1>;
-			};
-		};
 	};
 
 	psci {

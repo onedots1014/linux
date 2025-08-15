@@ -2,14 +2,19 @@
 /*
  * Copyright (C) STMicroelectronics 2017 - All Rights Reserved
  * Author: Ludovic Barre <ludovic.barre@st.com> for STMicroelectronics.
+ * Modified for Onedots board configuration
  */
 #include <dt-bindings/pinctrl/stm32-pinfunc.h>
+
+/*
+ * Pin control configuration for STM32MP157 Onedots board
+ * This file contains pin multiplexing definitions for various peripherals
+ */
 
 &pinctrl {
 	uart4_pins_a: uart4-0 {
 		pins1 {
-			//pinmux = <STM32_PINMUX('G', 11, AF6)>; /* UART4_TX */
-			pinmux = <STM32_PINMUX('A', 12,AF6)>; /* SPI5_MISO */
+			pinmux = <STM32_PINMUX('A', 12, AF6)>; /* UART4_TX */
 			bias-disable;
 			drive-push-pull;
 			slew-rate = <0>;
@@ -90,48 +95,6 @@
 		};
 	};
 
-	sdmmc2_b4_pins_b: sdmmc2-b4-1 {
-		pins1 {
-				pinmux = <STM32_PINMUX('B', 14, AF9)>, /* SDMMC2_D0 */
-							<STM32_PINMUX('B', 15, AF9)>, /* SDMMC2_D1 */
-							<STM32_PINMUX('B', 3, AF9)>, /* SDMMC2_D2 */
-							<STM32_PINMUX('B', 4, AF9)>, /* SDMMC2_D3 */
-							<STM32_PINMUX('G', 6, AF10)>; /* SDMMC2_CMD */
-				slew-rate = <1>;
-				drive-push-pull;
-				bias-disable;
-		};
-		pins2 {
-				pinmux = <STM32_PINMUX('E', 3, AF9)>; /* SDMMC2_CK */
-				slew-rate = <2>;
-				drive-push-pull;
-				bias-disable;
-		};
-	};
-
-	sdmmc2_b4_od_pins_b: sdmmc2-b4-od-1 {
-			pins1 {
-					pinmux = <STM32_PINMUX('B', 14, AF9)>, /* SDMMC2_D0 */
-								<STM32_PINMUX('B', 15, AF9)>, /* SDMMC2_D1 */
-								<STM32_PINMUX('B', 3, AF9)>, /* SDMMC2_D2 */
-								<STM32_PINMUX('B', 4, AF9)>; /* SDMMC2_D3 */
-					slew-rate = <1>;
-					drive-push-pull;
-					bias-disable;
-			};
-			pins2 {
-					pinmux = <STM32_PINMUX('E', 3, AF9)>; /* SDMMC2_CK */
-					slew-rate = <2>;
-					drive-push-pull;
-					bias-disable;
-			};
-			pins3 {
-					pinmux = <STM32_PINMUX('G', 6, AF10)>; /* SDMMC2_CMD */
-					slew-rate = <1>;
-					drive-open-drain;
-					bias-disable;
-			};
-	};
 
 	sdmmc2_d47_pins_a: sdmmc2-d47-0 {
 			pins {
@@ -157,17 +120,3 @@
 
 };
 
-// 启用需要的 GPIO banks
-&gpioa { status = "okay"; };
-&gpiob { status = "okay"; };
-&gpioc { status = "okay"; };
-&gpiod { status = "okay"; };
-&gpioe { status = "okay"; };
-&gpiof { status = "okay"; };
-&gpiog { status = "okay"; };
-&pinctrl_z { status = "disabled"; };
-
-&iwdg2 {
-    timeout-sec = <32>;  /* 32秒超时 */
-    status = "okay";
-};
