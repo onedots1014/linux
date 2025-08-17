@@ -7,6 +7,7 @@
 
 /dts-v1/;
 
+#include <dt-bindings/pinctrl/stm32-pinfunc.h>
 #include "stm32mp157-onedots.dtsi"
 #include "stm32mp157-onedots-pinctrl.dtsi"
 #include "stm32mp157-onedots-board.dtsi"
@@ -24,5 +25,6 @@
 
 	chosen {
 		stdout-path = "serial0:115200n8";
+		bootargs = "root=/dev/mmcblk0p3 rootwait rw console=ttySTM0,115200 init=/sbin/init";
 	};
 };

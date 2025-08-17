@@ -116,12 +116,6 @@
 	status = "okay";
 };
 
-&sram {
-	dma_pool: dma_pool@0 {
-		reg = <0x50000 0x10000>;
-		pool;
-	};
-};
 
 /* eMMC Configuration */
 &sdmmc2 {
@@ -141,13 +135,18 @@
 };
 
 /* Enable required GPIO banks */
-&gpioa { status = "okay"; };
-&gpiob { status = "okay"; };
-&gpioc { status = "okay"; };
-&gpiod { status = "okay"; };
-&gpioe { status = "okay"; };
-&gpiof { status = "okay"; };
-&gpiog { status = "okay"; };
+&gpioa { status = "okay"; };  /* UART4 (A11,A12) + SDMMC2 (A8,A9) */
+&gpiob { status = "okay"; };  /* SDMMC2 (B3,B4,B14,B15) */
+&gpioc { status = "okay"; };  /* System functions may need this */
+&gpiod { status = "okay"; };  /* SDMMC2 (D3) */
+&gpioe { status = "okay"; };  /* SDMMC2 (E3,E5) */
+&gpiof { status = "okay"; };  /* System functions may need this */
+&gpiog { status = "okay"; };  /* SDMMC2 (G6) */
+/* Optional GPIO banks - can be disabled if confirmed unused */
+&gpioh { status = "okay"; };
+&gpioi { status = "okay"; };
+&gpioj { status = "okay"; };
+&gpiok { status = "okay"; };
 &pinctrl_z { status = "disabled"; };
 
 /* Watchdog configuration */
