@@ -223,12 +223,11 @@
 
 	dfsdm1: filter@1 {
 		compatible = "st,stm32-dfsdm-dmic";
-		st,adc-channels = <0>;
+		st,adc-channels = <1>;
 		st,adc-channel-names = "dmic_u2";
 		st,adc-channel-types = "SPI_F";
 		st,adc-channel-clk-src = "CLKOUT";
 		st,filter-order = <3>;
-		st,adc-alt-channel = <1>;
 		status = "okay";
 
 		asoc_pdm1: dfsdm-dai {
@@ -247,11 +246,10 @@
 
 	dfsdm2: filter@2 {
 		compatible = "st,stm32-dfsdm-dmic";
-		st,adc-channels = <2>;
+		st,adc-channels = <3>;
 		st,adc-channel-names = "dmic_u3";
 		st,adc-channel-types = "SPI_F";
 		st,adc-channel-clk-src = "CLKOUT";
-		st,adc-alt-channel = <1>;
 		st,filter-order = <3>;
 		status = "okay";
 
@@ -301,8 +299,6 @@
 	phy-mode = "rgmii-id";
 	max-speed = <1000>;
 	phy-handle = <&phy0>;
-	nvmem-cells = <&ethernet_mac_address>;
-	nvmem-cell-names = "mac-address";
 
 	mdio0 {
 		#address-cells = <1>;
@@ -319,16 +315,14 @@
 	pinctrl-0 = <&fmc_pins_a>;
 	pinctrl-1 = <&fmc_sleep_pins_a>;
 	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
 
-	nand-controller@4,0 {
-		status = "okay";
-
-		nand@0 {
-			reg = <0>;
-			nand-on-flash-bbt;
-			#address-cells = <1>;
-			#size-cells = <1>;
-		};
+	nand@0 {
+		reg = <0>;
+		nand-on-flash-bbt;
+		#address-cells = <1>;
+		#size-cells = <1>;
 	};
 };
 
@@ -679,7 +673,6 @@
 
 &usbphyc_port0 {
 	st,phy-tuning = <&usb_phy_tuning>;
-	vbus-supply = <&vbus_sw>;
 };
 
 &usbphyc_port1 {
