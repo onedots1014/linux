@@ -7,6 +7,8 @@
 
 /dts-v1/;
 
+#include "stm32mp157.dtsi"
+#include "stm32mp15xa.dtsi"
 #include <dt-bindings/pinctrl/stm32-pinfunc.h>
 #include "stm32mp157-onedots.dtsi"
 #include "stm32mp157-onedots-pinctrl.dtsi"

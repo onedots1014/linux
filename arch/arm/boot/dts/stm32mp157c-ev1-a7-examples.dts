@@ -51,7 +51,3 @@
 &timers12 {
 	status = "okay";
 };
-
-&usart3 {
-	status = "okay";
-};
