@@ -194,17 +194,7 @@
 &gpioi { status = "okay"; };
 &gpioj { status = "okay"; };
 &gpiok { status = "okay"; };
-&pinctrl_z { status = "disabled";
-
-    m4_spi1_pins_z_mx: m4_spi1_mx-0 {
-       pins {
-           pinmux = <STM32_PINMUX('Z', 0, RSVD)>, /* SPI1_SCK */
-                  <STM32_PINMUX('Z', 1, RSVD)>, /* SPI1_MISO */
-                  <STM32_PINMUX('Z', 2, RSVD)>; /* SPI1_MOSI */
-       };
-    };
-
-};
+&pinctrl_z { status = "disabled";};
 
 /* Watchdog configuration */
 &iwdg2 {
@@ -217,13 +207,18 @@
 };
 
 &m4_rproc {
-	memory-region = <&retram>, <&mcuram>, <&mcuram2>, <&vdev0vring0>,
-			<&vdev0vring1>, <&vdev0buffer>;
-	mboxes = <&ipcc 0>, <&ipcc 1>, <&ipcc 2>;
-	mbox-names = "vq0", "vq1", "shutdown";
-	interrupt-parent = <&exti>;
-	interrupts = <68 1>;
-	wakeup-source;
-	status = "okay";
+    compatible = "st,stm32mp1-m4";
+
+    resets = <&scmi0_reset 0>, <&scmi0_reset 1>;   // 用数字索引（最稳，避免 ID 宏不对）
+    reset-names = "mcu_rst", "hold_boot";
+
+    memory-region = <&retram>, <&mcuram>, <&mcuram2>,
+                    <&vdev0vring0>, <&vdev0vring1>, <&vdev0buffer>;
+    mboxes = <&ipcc 0>, <&ipcc 1>, <&ipcc 2>;
+    mbox-names = "vq0", "vq1", "shutdown";
+    interrupt-parent = <&exti>;
+    interrupts = <68 1>;
+    wakeup-source;
+    status = "okay";
 };
 
