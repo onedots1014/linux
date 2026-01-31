@@ -10,7 +10,7 @@
 #include <dt-bindings/rtc/rtc-stm32.h>
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/usb/pd.h>
-
+#include <dt-bindings/reset/stm32mp1-resets.h>
 / {
 	memory@c0000000 {
 		device_type = "memory";
@@ -604,17 +604,57 @@
 };
 
 
+/* &m4_rproc { */
+/*     memory-region = <&retram>, <&mcuram>, <&mcuram2>, <&vdev0vring0>, */
+/*             <&vdev0vring1>, <&vdev0buffer>; */
+/*     mboxes = <&ipcc 0>, <&ipcc 1>, <&ipcc 2>; */
+/*     mbox-names = "vq0", "vq1", "shutdown"; */
+/*     interrupt-parent = <&exti>; */
+/*     interrupts = <68 1>; */
+/*     wakeup-source; */
+/*     status = "okay"; */
+/* }; */
+/* &m4_rproc { */
+/*     compatible = "st,stm32mp1-m4";          // 建议加上 compatible，如果父节点没定义 */
+/*     resets = <&rcc 0>; */
+/*     reset-names = "mcu_rst"; */
+/*     memory-region = <&retram>, <&mcuram>, <&mcuram2>, */
+/*                     <&vdev0vring0>, <&vdev0vring1>, <&vdev0buffer>; */
+/*     mboxes = <&ipcc 0>, <&ipcc 1>, <&ipcc 2>; */
+/*     mbox-names = "vq0", "vq1", "shutdown"; */
+/*     interrupt-parent = <&exti>; */
+/*     interrupts = <68 1>; */
+/*     wakeup-source; */
+/*     status = "okay"; */
+/* }; */
+/* &m4_rproc { */
+/*     compatible = "st,stm32mp1-m4";  // 必须有这个，驱动匹配用 */
+/*     resets = <&scmi0_reset RST_SCMI0_MCU>; */
+/*     reset-names = "mcu_rst", "hold_boot"; */
+/*     memory-region = <&retram>, <&mcuram>, <&mcuram2>, */
+/*                     <&vdev0vring0>, <&vdev0vring1>, <&vdev0buffer>; */
+/*     mboxes = <&ipcc 0>, <&ipcc 1>, <&ipcc 2>; */
+/*     mbox-names = "vq0", "vq1", "shutdown"; */
+/*     interrupt-parent = <&exti>; */
+/*     interrupts = <68 1>; */
+/*     wakeup-source; */
+/*     status = "okay"; */
+/* }; */
 &m4_rproc {
-	memory-region = <&retram>, <&mcuram>, <&mcuram2>, <&vdev0vring0>,
-			<&vdev0vring1>, <&vdev0buffer>;
-	mboxes = <&ipcc 0>, <&ipcc 1>, <&ipcc 2>;
-	mbox-names = "vq0", "vq1", "shutdown";
-	interrupt-parent = <&exti>;
-	interrupts = <68 1>;
-	wakeup-source;
-	status = "okay";
-};
+    compatible = "st,stm32mp1-m4";
 
+    resets = <&scmi0_reset 0>, <&scmi0_reset 1>;   // 用数字索引（最稳，避免 ID 宏不对）
+    reset-names = "mcu_rst", "hold_boot";
+
+    memory-region = <&retram>, <&mcuram>, <&mcuram2>,
+                    <&vdev0vring0>, <&vdev0vring1>, <&vdev0buffer>;
+    mboxes = <&ipcc 0>, <&ipcc 1>, <&ipcc 2>;
+    mbox-names = "vq0", "vq1", "shutdown";
+    interrupt-parent = <&exti>;
+    interrupts = <68 1>;
+    wakeup-source;
+    status = "okay";
+};
 /*
 &pwr {
 	pwr-supply = <&vdd>;
