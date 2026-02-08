@@ -117,6 +117,11 @@
 			};
 	};
 
-
+	/* M4 LED pin - PA10 reserved for Cortex-M4 */
+	m4_led_pa10_pins: m4-led-pa10-0 {
+		pins {
+			pinmux = <STM32_PINMUX('A', 10, RSVD)>;
+		};
+	};
 };
 

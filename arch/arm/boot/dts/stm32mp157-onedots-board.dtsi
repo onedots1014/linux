@@ -209,7 +209,7 @@
 &m4_rproc {
     compatible = "st,stm32mp1-m4";
 
-    resets = <&scmi0_reset 0>, <&scmi0_reset 1>;   // 用数字索引（最稳，避免 ID 宏不对）
+    resets = <&scmi0_reset RST_SCMI0_MCU>, <&scmi0_reset RST_SCMI0_MCU_HOLD_BOOT>;
     reset-names = "mcu_rst", "hold_boot";
 
     memory-region = <&retram>, <&mcuram>, <&mcuram2>,
@@ -220,5 +220,14 @@
     interrupts = <68 1>;
     wakeup-source;
     status = "okay";
+
+    m4_system_resources {
+        m4_led: m4_led {
+            compatible = "rproc-srm-dev";
+            pinctrl-names = "default";
+            pinctrl-0 = <&m4_led_pa10_pins>;
+            status = "okay";
+        };
+    };
 };
 
