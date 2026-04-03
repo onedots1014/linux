@@ -206,6 +206,14 @@
 	status = "okay";
 };
 
+/* SAI1_K clock config: set PLL3_Q as source via m4_rproc assigned-clocks.
+ * m4_rproc driver always probes, so clk_set_defaults() is guaranteed to run.
+ * SAI1_K = PLL3_Q ~24.576MHz → MCLK = 24.576MHz/2 = 12.288MHz = 256*48kHz */
+&sai1 {
+	clocks = <&rcc SAI1>, <&rcc PLL3_Q>, <&rcc PLL3_R>;
+	clock-names = "pclk", "x8k", "x11k";
+	status = "okay";
+};
 &m4_rproc {
     compatible = "st,stm32mp1-m4";
 
@@ -220,6 +228,9 @@
     interrupts = <68 1>;
     wakeup-source;
     status = "okay";
+
+    assigned-clocks = <&rcc SAI1_K>;
+    assigned-clock-parents = <&rcc PLL3_Q>;
 
     m4_system_resources {
         m4_led: m4_led {
