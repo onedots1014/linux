@@ -163,7 +163,6 @@
 	status = "okay";
 };
 
-
 /* eMMC Configuration */
 &sdmmc2 {
         pinctrl-names = "default", "opendrain", "sleep";
