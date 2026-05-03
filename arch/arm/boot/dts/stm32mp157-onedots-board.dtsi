@@ -13,7 +13,7 @@
 / {
 	/* Add aliases to fix device mapping */
 	aliases {
-		mmc1 = &sdmmc2;  /* eMMC (main storage) */
+		mmc1 = &sdmmc2;  /* eMMC → mmcblk1 (SDMMC3/WiFi probes first as mmc0) */
 	};
 	memory@c0000000 {
 		device_type = "memory";
@@ -145,6 +145,24 @@
 				regulator-active-discharge = <1>;
 			 };
 	};
+
+	wifi_fixed: fixedregulator@1 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_fixed_pins_a>;
+		compatible = "regulator-fixed";
+		regulator-name = "wifi_fixed";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		startup-delay-us = <70000>;
+		regulator-boot-on;
+		regulator-pull-down;
+	};
+
+	wifi_pwrseq: wifi-pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		reset-gpios = <&gpioi 3 GPIO_ACTIVE_LOW>;
+		post-power-on-delay-ms = <150>;
+	};
 };
 
 &cpu0{
@@ -193,7 +211,7 @@
 &gpioi { status = "okay"; };
 &gpioj { status = "okay"; };
 &gpiok { status = "okay"; };
-&pinctrl_z { status = "disabled";};
+&pinctrl_z { status = "okay"; };
 
 /* Watchdog configuration */
 &iwdg2 {
@@ -239,5 +257,40 @@
             status = "okay";
         };
     };
+};
+
+/* WiFi - BCM43438 via SDIO (SDMMC3) */
+&sdmmc3 {
+	arm,primecell-periphid = <0x10153180>;
+	pinctrl-names = "default", "opendrain", "sleep";
+	pinctrl-0 = <&sdmmc3_b4_pins_a>;
+	pinctrl-1 = <&sdmmc3_b4_od_pins_a>;
+	pinctrl-2 = <&sdmmc3_b4_sleep_pins_a>;
+	non-removable;
+	st,neg-edge;
+	bus-width = <4>;
+	vmmc-supply = <&wifi_fixed>;
+	mmc-pwrseq = <&wifi_pwrseq>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	keep-power-in-suspend;
+	max-frequency = <25000000>;
+	status = "okay";
+};
+
+/* Bluetooth - BCM43438 via UART (USART1) */
+&usart1 {
+	pinctrl-names = "default", "sleep", "idle";
+	pinctrl-0 = <&usart1_pins_z_mx>;
+	pinctrl-1 = <&usart1_sleep_pins_z_mx>;
+	pinctrl-2 = <&usart1_idle_pins_z_mx>;
+	uart-has-rtscts;
+	status = "okay";
+
+	bluetooth {
+		shutdown-gpios = <&gpioa 14 GPIO_ACTIVE_HIGH>;
+		compatible = "brcm,bcm43438-bt";
+		max-speed = <3000000>;
+	};
 };
 
