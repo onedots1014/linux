@@ -1,0 +1,156 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR BSD-3-Clause)
+/*
+ * Copyright (C) STMicroelectronics 2019 - All Rights Reserved
+ * Author: Alexandre Torgue <alexandre.torgue@st.com> for STMicroelectronics.
+ */
+
+/ {
+	/* Add aliases to fix device mapping */
+	aliases {
+		mmc1 = &sdmmc2;  /* eMMC (main storage) */
+	};
+	memory@c0000000 {
+		device_type = "memory";
+		reg = <0xc0000000 0x20000000>;
+	};
+
+	regulators {
+			compatible = "regulator-gpio";
+			ldo1-supply = <&v3v3>;
+			ldo3-supply = <&vdd_ddr>;
+			ldo6-supply = <&v3v3>;
+			pwr_sw1-supply = <&bst_out>;
+			pwr_sw2-supply = <&bst_out>;
+			
+			vddcore: buck1 {
+				regulator-name = "vddcore";
+				regulator-min-microvolt = <1200000>;
+				regulator-max-microvolt = <1350000>;
+				regulator-always-on;
+				regulator-initial-mode = <0>;
+				regulator-over-current-protection;
+			};
+
+			vdd_ddr: buck2 {
+				regulator-name = "vdd_ddr";
+				regulator-min-microvolt = <1350000>;
+				regulator-max-microvolt = <1350000>;
+				regulator-always-on;
+				regulator-initial-mode = <0>;
+				regulator-over-current-protection;
+			};
+
+			vdd: buck3 {
+				regulator-name = "vdd";
+				regulator-min-microvolt = <3300000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-always-on;
+				st,mask-reset;
+				regulator-initial-mode = <0>;
+				regulator-over-current-protection;
+			};
+
+			v3v3: buck4 {
+				regulator-name = "v3v3";
+				regulator-min-microvolt = <3300000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-always-on;
+				regulator-over-current-protection;
+				regulator-initial-mode = <0>;
+			};
+
+
+			vtt_ddr: ldo3 {
+				regulator-name = "vtt_ddr";
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <750000>;
+				regulator-always-on;
+				regulator-over-current-protection;
+			};
+			vdda: ldo5 {
+				regulator-name = "vdda";
+				regulator-min-microvolt = <2900000>;
+				regulator-max-microvolt = <2900000>;
+				//interrupts = <IT_CURLIM_LDO5 0>;
+				regulator-boot-on;
+			};
+
+
+			vref_ddr: vref_ddr {
+				regulator-name = "vref_ddr";
+				regulator-always-on;
+				regulator-over-current-protection;
+			};
+
+			 bst_out: boost {
+				regulator-name = "bst_out";
+				//interrupts = <IT_OCP_BOOST 0>;
+			 };
+
+			vbus_otg: pwr_sw1 {
+				regulator-name = "vbus_otg";
+				//interrupts = <IT_OCP_OTG 0>;
+			 };
+
+			 vbus_sw: pwr_sw2 {
+				regulator-name = "vbus_sw";
+				//interrupts = <IT_OCP_SWOUT 0>;
+				regulator-active-discharge = <1>;
+			 };
+	};
+};
+
+&cpu0{
+	cpu-supply = <&vddcore>;
+};
+
+/* DEBUG UART Configuration */
+&uart4 {
+	pinctrl-names = "default", "sleep", "idle";
+	pinctrl-0 = <&uart4_pins_a>;
+	pinctrl-1 = <&uart4_sleep_pins_a>;
+	pinctrl-2 = <&uart4_idle_pins_a>;
+	pinctrl-3 = <&uart4_pins_a>;
+	/delete-property/dmas;
+	/delete-property/dma-names;
+	status = "okay";
+};
+
+
+/* eMMC Configuration */
+&sdmmc2 {
+        pinctrl-names = "default", "opendrain", "sleep";
+        pinctrl-0 = <&sdmmc2_b4_pins_a &sdmmc2_d47_pins_a>;
+        pinctrl-1 = <&sdmmc2_b4_od_pins_a &sdmmc2_d47_pins_a>;
+        pinctrl-2 = <&sdmmc2_b4_sleep_pins_a &sdmmc2_d47_sleep_pins_a>;
+        non-removable;
+        no-sd;
+        no-sdio;
+        st,dirpol;
+        st,negedge;
+        bus-width = <8>;
+        vmmc-supply = <&vmmc>;
+        vqmmc-supply = <&vmmc>;
+        status = "okay";
+};
+
+/* Enable required GPIO banks */
+&gpioa { status = "okay"; };  /* UART4 (A11,A12) + SDMMC2 (A8,A9) */
+&gpiob { status = "okay"; };  /* SDMMC2 (B3,B4,B14,B15) */
+&gpioc { status = "okay"; };  /* System functions may need this */
+&gpiod { status = "okay"; };  /* SDMMC2 (D3) */
+&gpioe { status = "okay"; };  /* SDMMC2 (E3,E5) */
+&gpiof { status = "okay"; };  /* System functions may need this */
+&gpiog { status = "okay"; };  /* SDMMC2 (G6) */
+/* Optional GPIO banks - can be disabled if confirmed unused */
+&gpioh { status = "okay"; };
+&gpioi { status = "okay"; };
+&gpioj { status = "okay"; };
+&gpiok { status = "okay"; };
+&pinctrl_z { status = "disabled"; };
+
+/* Watchdog configuration */
+&iwdg2 {
+	timeout-sec = <32>;  /* 32 seconds timeout */
+	status = "okay";
+};

@@ -1,0 +1,494 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR BSD-3-Clause)
+/*
+ * Copyright (C) STMicroelectronics 2017 - All Rights Reserved
+ * Author: Ludovic Barre <ludovic.barre@st.com> for STMicroelectronics.
+ */
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/clock/stm32mp1-clks.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/reset/stm32mp1-resets.h>
+#include <dt-bindings/thermal/thermal.h>
+
+
+/ {
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu0: cpu@0 {
+			compatible = "arm,cortex-a7";
+			device_type = "cpu";
+			reg = <0>;
+			clocks = <&scmi0_clk CK_SCMI0_MPU>;
+			clock-names = "cpu";
+			operating-points-v2 = <&cpu0_opp_table>;
+			nvmem-cells = <&part_number_otp>;
+			nvmem-cell-names = "part_number";
+			#cooling-cells = <2>;
+		};
+	};
+
+	cpu0_opp_table: cpu0-opp-table {
+		compatible = "operating-points-v2";
+		opp-shared;
+	};
+
+	arm-pmu {
+		compatible = "arm,cortex-a7-pmu";
+		interrupts = <GIC_SPI 200 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-affinity = <&cpu0>;
+		interrupt-parent = <&intc>;
+	};
+
+	scmi_sram: sram@2ffff000 {
+		compatible = "mmio-sram";
+		reg = <0x2ffff000 0x1000>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <0 0x2ffff000 0x1000>;
+
+		scmi0_shm: scmi_shm@0 {
+			reg = <0 0x80>;
+		};
+
+	};
+
+	scmi0_mbox: mailbox-0 {
+		#mbox-cells = <0>;
+		compatible = "arm,smc-mbox";
+		arm,func-id = <0x82002000>;
+	};
+
+
+	firmware {
+		scmi0: scmi-0 {
+			compatible = "arm,scmi";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			mboxes = <&scmi0_mbox 0>;
+			mbox-names = "txrx";
+			shmem = <&scmi0_shm>;
+
+			scmi0_clk: protocol@14 {
+				reg = <0x14>;
+				#clock-cells = <1>;
+			};
+			scmi0_reset: protocol@16 {
+				reg = <0x16>;
+				#reset-cells = <1>;
+			};
+		};
+
+	};
+
+	psci {
+		compatible = "arm,psci-1.0";
+		method = "smc";
+	};
+
+	intc: interrupt-controller@a0021000 {
+		compatible = "arm,cortex-a7-gic";
+		#interrupt-cells = <3>;
+		interrupt-controller;
+		reg = <0xa0021000 0x1000>,
+		      <0xa0022000 0x2000>;
+	};
+
+	timer {
+		compatible = "arm,armv7-timer";
+		interrupts = <GIC_PPI 13 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
+			     <GIC_PPI 14 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
+			     <GIC_PPI 11 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
+			     <GIC_PPI 10 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>;
+		interrupt-parent = <&intc>;
+		always-on;
+	};
+
+	pm_domain {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "st,stm32mp157c-pd";
+
+		pd_core_ret: core-ret-power-domain@1 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <1>;
+			#power-domain-cells = <0>;
+			label = "CORE-RETENTION";
+
+			pd_core: core-power-domain@2 {
+				reg = <2>;
+				#power-domain-cells = <0>;
+				label = "CORE";
+			};
+		};
+	};
+
+	reboot {
+		compatible = "syscon-reboot";
+		regmap = <&rcc>;
+		offset = <0x404>;
+		mask = <0x1>;
+	};
+
+	soc {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		interrupt-parent = <&intc>;
+		ranges;
+
+		sram: sram@10000000 {
+			compatible = "mmio-sram";
+			reg = <0x10000000 0x60000>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0x10000000 0x60000>;
+		};
+
+		uart4: serial@40010000 {
+			compatible = "st,stm32h7-uart";
+			reg = <0x40010000 0x400>;
+			interrupts-extended = <&exti 30 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&rcc UART4_K>;
+			wakeup-source;
+			power-domains = <&pd_core>;
+			dmas = <&dmamux1 63 0x400 0x15>,
+			       <&dmamux1 64 0x400 0x11>;
+			dma-names = "rx", "tx";
+			status = "disabled";
+		};
+
+		dma1: dma@48000000 {
+			compatible = "st,stm32-dma";
+			reg = <0x48000000 0x400>;
+			interrupts = <GIC_SPI 11 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 12 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 13 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 14 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 15 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 16 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 17 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 47 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&rcc DMA1>;
+			resets = <&rcc DMA1_R>;
+			#dma-cells = <4>;
+			st,mem2mem;
+			dma-requests = <8>;
+			dmas = <&mdma1 0 0x3 0x1200000a 0x48000008 0x00000020 1>,
+			       <&mdma1 1 0x3 0x1200000a 0x48000008 0x00000800 1>,
+			       <&mdma1 2 0x3 0x1200000a 0x48000008 0x00200000 1>,
+			       <&mdma1 3 0x3 0x1200000a 0x48000008 0x08000000 1>,
+			       <&mdma1 4 0x3 0x1200000a 0x4800000C 0x00000020 1>,
+			       <&mdma1 5 0x3 0x1200000a 0x4800000C 0x00000800 1>,
+			       <&mdma1 6 0x3 0x1200000a 0x4800000C 0x00200000 1>,
+			       <&mdma1 7 0x3 0x1200000a 0x4800000C 0x08000000 1>;
+			dma-names = "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7";
+		};
+
+		dma2: dma@48001000 {
+			compatible = "st,stm32-dma";
+			reg = <0x48001000 0x400>;
+			interrupts = <GIC_SPI 56 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 57 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 58 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 59 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 60 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 70 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&rcc DMA2>;
+			resets = <&rcc DMA2_R>;
+			#dma-cells = <4>;
+			st,mem2mem;
+			dma-requests = <8>;
+			dmas = <&mdma1 8 0x3 0x1200000a 0x48001008 0x00000020 1>,
+			       <&mdma1 9 0x3 0x1200000a 0x48001008 0x00000800 1>,
+			       <&mdma1 10 0x3 0x1200000a 0x48001008 0x00200000 1>,
+			       <&mdma1 11 0x3 0x1200000a 0x48001008 0x08000000 1>,
+			       <&mdma1 12 0x3 0x1200000a 0x4800100C 0x00000020 1>,
+			       <&mdma1 13 0x3 0x1200000a 0x4800100C 0x00000800 1>,
+			       <&mdma1 14 0x3 0x1200000a 0x4800100C 0x00200000 1>,
+			       <&mdma1 15 0x3 0x1200000a 0x4800100C 0x08000000 1>;
+			dma-names = "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7";
+		};
+
+		dmamux1: dma-router@48002000 {
+			compatible = "st,stm32h7-dmamux";
+			reg = <0x48002000 0x40>;
+			#dma-cells = <3>;
+			dma-requests = <128>;
+			dma-masters = <&dma1 &dma2>;
+			dma-channels = <16>;
+			clocks = <&rcc DMAMUX>;
+			resets = <&rcc DMAMUX_R>;
+		};
+
+		hsem: hwspinlock@4c000000 {
+			compatible = "st,stm32-hwspinlock";
+			#hwlock-cells = <2>;
+			reg = <0x4c000000 0x400>;
+			clocks = <&rcc HSEM>;
+			clock-names = "hsem";
+		};
+
+		rcc: rcc@50000000 {
+			compatible = "st,stm32mp1-rcc-secure", "st,stm32mp1-rcc", "syscon";
+			reg = <0x50000000 0x1000>;
+			#clock-cells = <1>;
+			#reset-cells = <1>;
+			interrupts = <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>;
+
+			clock-names = "hse", "hsi", "csi", "lse", "lsi";
+			clocks = <&scmi0_clk CK_SCMI0_HSE>,
+				 <&scmi0_clk CK_SCMI0_HSI>,
+				 <&scmi0_clk CK_SCMI0_CSI>,
+				 <&scmi0_clk CK_SCMI0_LSE>,
+				 <&scmi0_clk CK_SCMI0_LSI>;
+		};
+
+		exti: interrupt-controller@5000d000 {
+			compatible = "st,stm32mp1-exti", "syscon";
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			reg = <0x5000d000 0x400>;
+			hwlocks = <&hsem 1 1>;
+		};
+
+		mdma1: dma@58000000 {
+			compatible = "st,stm32h7-mdma";
+			reg = <0x58000000 0x1000>;
+			interrupts = <GIC_SPI 122 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&rcc MDMA>;
+			resets = <&scmi0_reset RST_SCMI0_MDMA>;
+			#dma-cells = <6>;
+			dma-channels = <32>;
+			dma-requests = <48>;
+		};
+
+		syscfg: syscon@50020000 {
+			compatible = "st,stm32mp157-syscfg", "syscon";
+			reg = <0x50020000 0x400>;
+			clocks = <&rcc SYSCFG>;
+		};
+
+		bsec: nvmem@5c005000 {
+			compatible = "st,stm32mp15-bsec";
+			reg = <0x5c005000 0x400>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			part_number_otp: part_number_otp@4 {
+				reg = <0x4 0x1>;
+			};
+			ts_cal1: calib@5c {
+				reg = <0x5c 0x2>;
+			};
+			ts_cal2: calib@5e {
+				reg = <0x5e 0x2>;
+			};
+			ethernet_mac_address: mac@e4 {
+				reg = <0xe4 0x6>;
+			};
+		};
+
+		/*
+		 * Break node order to solve dependency probe issue between
+		 * pinctrl and exti.
+		 */
+		pinctrl: pin-controller@50002000 {
+			#address-cells = <1>;
+			#size-cells = <1>;
+			compatible = "st,stm32mp157-pinctrl";
+			ranges = <0 0x50002000 0xa400>;
+			interrupt-parent = <&exti>;
+			st,syscfg = <&exti 0x60 0xff>;
+			hwlocks = <&hsem 0 1>;
+			pins-are-numbered;
+
+			gpioa: gpio@50002000 {
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				reg = <0x0 0x400>;
+				clocks = <&rcc GPIOA>;
+				st,bank-name = "GPIOA";
+				gpio-ranges = <&pinctrl 0 0 16>;
+				status = "disabled";
+			};
+
+			gpiob: gpio@50003000 {
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				reg = <0x1000 0x400>;
+				clocks = <&rcc GPIOB>;
+				st,bank-name = "GPIOB";
+				gpio-ranges = <&pinctrl 0 16 16>;
+				status = "disabled";
+			};
+
+			gpioc: gpio@50004000 {
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				reg = <0x2000 0x400>;
+				clocks = <&rcc GPIOC>;
+				st,bank-name = "GPIOC";
+				gpio-ranges = <&pinctrl 0 32 16>;
+				status = "disabled";
+			};
+
+			gpiod: gpio@50005000 {
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				reg = <0x3000 0x400>;
+				clocks = <&rcc GPIOD>;
+				st,bank-name = "GPIOD";
+				gpio-ranges = <&pinctrl 0 48 16>;
+				status = "disabled";
+			};
+
+			gpioe: gpio@50006000 {
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				reg = <0x4000 0x400>;
+				clocks = <&rcc GPIOE>;
+				st,bank-name = "GPIOE";
+				status = "disabled";
+			};
+
+			gpiof: gpio@50007000 {
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				reg = <0x5000 0x400>;
+				clocks = <&rcc GPIOF>;
+				st,bank-name = "GPIOF";
+				status = "disabled";
+			};
+
+			gpiog: gpio@50008000 {
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				reg = <0x6000 0x400>;
+				clocks = <&rcc GPIOG>;
+				st,bank-name = "GPIOG";
+				status = "disabled";
+			};
+
+			gpioh: gpio@50009000 {
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				reg = <0x7000 0x400>;
+				clocks = <&rcc GPIOH>;
+				st,bank-name = "GPIOH";
+				status = "disabled";
+			};
+
+			gpioi: gpio@5000a000 {
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				reg = <0x8000 0x400>;
+				clocks = <&rcc GPIOI>;
+				st,bank-name = "GPIOI";
+				status = "disabled";
+			};
+
+			gpioj: gpio@5000b000 {
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				reg = <0x9000 0x400>;
+				clocks = <&rcc GPIOJ>;
+				st,bank-name = "GPIOJ";
+				status = "disabled";
+			};
+
+			gpiok: gpio@5000c000 {
+				gpio-controller;
+				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				reg = <0xa000 0x400>;
+				clocks = <&rcc GPIOK>;
+				st,bank-name = "GPIOK";
+				status = "disabled";
+			};
+		};
+
+	pinctrl_z: pin-controller-z@54004000 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "st,stm32mp157-z-pinctrl";
+		ranges = <0 0x54004000 0x400>;
+		pins-are-numbered;
+		interrupt-parent = <&exti>;
+		st,syscfg = <&exti 0x60 0xff>;
+		hwlocks = <&hsem 0 1>;
+
+		gpioz: gpio@54004000 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			reg = <0 0x400>;
+			clocks = <&scmi0_clk CK_SCMI0_GPIOZ>;
+			st,bank-name = "GPIOZ";
+			st,bank-ioport = <11>;
+			status = "disabled";
+		};
+	};
+
+	vmmc: fixedregulator@2 {
+		compatible = "regulator-fixed";
+		regulator-name = "vmmc";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
+	sdmmc2: sdmmc@58007000 {
+		compatible = "arm,pl18x", "arm,primecell";
+		arm,primecell-periphid = <0x00253180>;
+		reg = <0x58007000 0x1000>, <0x58008000 0x1000>;
+		interrupts = <GIC_SPI 124 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "cmd_irq";
+		clocks = <&rcc SDMMC2_K>;
+		clock-names = "apb_pclk";
+		resets = <&rcc SDMMC2_R>;
+		cap-sd-highspeed;
+		cap-mmc-highspeed;
+		max-frequency = <120000000>;
+		status = "disabled";
+	};
+
+			iwdg2: watchdog@5a002000 {
+			compatible = "st,stm32mp1-iwdg";
+			reg = <0x5a002000 0x400>;
+			clocks = <&rcc IWDG2>, <&scmi0_clk CK_SCMI0_LSI>;
+			clock-names = "pclk", "lsi";
+			status = "disabled";
+		};
+};
+};
