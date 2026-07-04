@@ -13,6 +13,7 @@
 #include "stm32mp157-onedots.dtsi"
 #include "stm32mp157-onedots-pinctrl.dtsi"
 #include "stm32mp157-onedots-board.dtsi"
+#include "stm32mp157-onedots-audio.dtsi"
 
 / {
 	model = "Onedots STM32MP157C Development Board";
