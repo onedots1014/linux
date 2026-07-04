@@ -10,14 +10,14 @@
 #include "stm32mp157.dtsi"
 #include "stm32mp15xa.dtsi"
 #include <dt-bindings/pinctrl/stm32-pinfunc.h>
-#include "stm32mp157-onedots.dtsi"
-#include "stm32mp157-onedots-pinctrl.dtsi"
-#include "stm32mp157-onedots-board.dtsi"
-#include "stm32mp157-onedots-audio.dtsi"
+#include "stm32mp157-quartzix.dtsi"
+#include "stm32mp157-quartzix-pinctrl.dtsi"
+#include "stm32mp157-quartzix-board.dtsi"
+#include "stm32mp157-quartzix-audio.dtsi"
 
 / {
-	model = "Onedots STM32MP157C Development Board";
-	compatible = "st,stm32mp157c-onedots-512d-v1", "st,stm32mp157";
+	model = "Quartzix STM32MP157C Development Board";
+	compatible = "st,stm32mp157c-quartzix-512d-v1", "st,stm32mp157";
 	
 	/* Package type specification to eliminate warnings */
 	st,package = <STM32MP_PKG_AC>;

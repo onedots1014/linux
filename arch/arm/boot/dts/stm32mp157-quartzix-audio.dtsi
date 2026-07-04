@@ -17,7 +17,7 @@
 / {
 	sound_wm8960: sound {
 		compatible = "audio-graph-card";
-		label = "WM8960-onedots";
+		label = "WM8960-quartzix";
 		dais = <&sai1a_port>;
 		widgets =
 			"Headphone", "Headphone Jack",

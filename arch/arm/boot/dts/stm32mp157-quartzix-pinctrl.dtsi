@@ -2,12 +2,12 @@
 /*
  * Copyright (C) STMicroelectronics 2017 - All Rights Reserved
  * Author: Ludovic Barre <ludovic.barre@st.com> for STMicroelectronics.
- * Modified for Onedots board configuration
+ * Modified for Quartzix board configuration
  */
 #include <dt-bindings/pinctrl/stm32-pinfunc.h>
 
 /*
- * Pin control configuration for STM32MP157 Onedots board
+ * Pin control configuration for STM32MP157 Quartzix board
  * This file contains pin multiplexing definitions for various peripherals
  */
 
