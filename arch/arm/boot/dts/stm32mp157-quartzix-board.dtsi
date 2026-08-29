@@ -219,8 +219,30 @@
 	status = "okay";
 };
 
+/* wakeup-source arms ipcc->irqs[IPCC_IRQ_RX] via dev_pm_set_wake_irq()
+ * (stm32-ipcc.c). Without it, the M4's rpmsg WAKE message reaches this
+ * IRQ line but s2idle never rouses the CPU for it — m4_rproc's own
+ * "wakeup-source"/EXTI 68 only arms the M4 watchdog IRQ (stm32_rproc.c
+ * names it wdg_irq), unrelated to rpmsg traffic. */
 &ipcc {
 	status = "okay";
+	wakeup-source;
+};
+
+/* DMA1 is exclusively driven by the M4 firmware (DMA1_Stream0/1, circular
+ * mode, for continuous SAI1 audio capture — see stm32mp1xx_hal_msp.c) and
+ * never releases channel 0's EN bit. If Linux also probes dma1, its s2idle
+ * suspend hook does a raw register scan of all 8 channels and permanently
+ * sees channel 0 busy, aborting suspend with "Suspend is prevented by Chan
+ * 0". Disable it for Linux; dmamux1 falls back to dma2 for any CA7 client
+ * (currently only the unused sai1a playback path). */
+&dma1 {
+	status = "disabled";
+};
+
+&dmamux1 {
+	dma-masters = <&dma2>;
+	dma-channels = <8>;
 };
 
 /* SAI1_K clock config: set PLL3_Q as source via m4_rproc assigned-clocks.

@@ -1925,7 +1925,13 @@ static const struct clock_config stm32mp1_clock_cfg[] = {
 		  _NO_MUX,
 		  _DIV(RCC_PLL3CFGR2, 0, 7, 0, NULL)),
 
-	COMPOSITE(PLL3_Q, "pll3_q", PARENT("pll3"), 0,
+	/* CLK_IS_CRITICAL: sole source of SAI1_K for the M4's continuous KWS
+	 * audio capture (see stm32mp157-quartzix-board.dtsi). No Linux driver
+	 * holds an enable ref on this path since CA7 never opens an SAI1
+	 * stream, so without this flag the generic "disable unused clocks"
+	 * pass gates it off — including across suspend — silently freezing
+	 * the M4's audio pipeline. */
+	COMPOSITE(PLL3_Q, "pll3_q", PARENT("pll3"), CLK_IS_CRITICAL,
 		  _GATE(RCC_PLL3CR, 5, 0),
 		  _NO_MUX,
 		  _DIV_DUTY_CYCLE(RCC_PLL3CFGR2, 8, 7, 0, NULL)),
@@ -2041,7 +2047,7 @@ static const struct clock_config stm32mp1_clock_cfg[] = {
 	PCLK(SPI4, "spi4", "pclk2", 0, G_SPI4),
 	PCLK(SPI5, "spi5", "pclk2", 0, G_SPI5),
 	PCLK(USART6, "usart6", "pclk2", 0, G_USART6),
-	PCLK(SAI1, "sai1", "pclk2", 0, G_SAI1),
+	PCLK(SAI1, "sai1", "pclk2", CLK_IS_CRITICAL, G_SAI1),
 	PCLK(SAI2, "sai2", "pclk2", 0, G_SAI2),
 	PCLK(SAI3, "sai3", "pclk2", 0, G_SAI3),
 	PCLK(DFSDM, "dfsdm", "pclk2", 0, G_DFSDM),
@@ -2085,7 +2091,15 @@ static const struct clock_config stm32mp1_clock_cfg[] = {
 	PCLK(RNG2, "rng2", "ck_mcu", 0, G_RNG2),
 	PCLK(CRC2, "crc2", "ck_mcu", 0, G_CRC2),
 	PCLK(HSEM, "hsem", "ck_mcu", 0, G_HSEM),
-	PCLK(IPCC, "ipcc", "ck_mcu", 0, G_IPCC),
+	/* CLK_IS_CRITICAL: the ipcc driver's own probe() disables this clock
+	 * right after setup (clk_disable_unprepare at probe exit) and only
+	 * re-enables it around active transfers, but stm32_ipcc_suspend()
+	 * reads XMR/XCR via readl_relaxed() without re-enabling it first —
+	 * and more importantly, an M4-initiated doorbell into a clock-gated
+	 * IPCC block cannot latch/assert its IRQ at all, silently defeating
+	 * the ipcc wakeup-source (see stm32mp157-quartzix-board.dtsi). Keep
+	 * it permanently clocked; cost is negligible. */
+	PCLK(IPCC, "ipcc", "ck_mcu", CLK_IS_CRITICAL, G_IPCC),
 	PCLK(GPIOA, "gpioa", "ck_mcu", 0, G_GPIOA),
 	PCLK(GPIOB, "gpiob", "ck_mcu", 0, G_GPIOB),
 	PCLK(GPIOC, "gpioc", "ck_mcu", 0, G_GPIOC),
@@ -2152,7 +2166,7 @@ static const struct clock_config stm32mp1_clock_cfg[] = {
 	KCLK(UART7_K, "uart7_k", usart234578_src, 0, G_UART7, M_UART78),
 	KCLK(UART8_K, "uart8_k", usart234578_src, 0, G_UART8, M_UART78),
 	KCLK(FDCAN_K, "fdcan_k", fdcan_src, 0, G_FDCAN, M_FDCAN),
-	KCLK(SAI1_K, "sai1_k", sai_src, 0, G_SAI1, M_SAI1),
+	KCLK(SAI1_K, "sai1_k", sai_src, CLK_IS_CRITICAL, G_SAI1, M_SAI1),
 	KCLK(SAI2_K, "sai2_k", sai2_src, 0, G_SAI2, M_SAI2),
 	KCLK(SAI3_K, "sai3_k", sai_src, 0, G_SAI3, M_SAI3),
 	KCLK(SAI4_K, "sai4_k", sai_src, 0, G_SAI4, M_SAI4),

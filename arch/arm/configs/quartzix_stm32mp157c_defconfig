@@ -49,6 +49,14 @@ CONFIG_STM32_DMA=y
 CONFIG_STM32_DMAMUX=y
 CONFIG_STM32_MDMA=y
 
+# FAT (bootfs.vfat is a separate FAT partition, not the ext4 rootfs's own
+# /boot — without this Linux can't mount it to update dtb/uImage in place
+# and every boot-partition change requires a full USB DFU reflash)
+CONFIG_FAT_FS=y
+CONFIG_VFAT_FS=y
+CONFIG_NLS_CODEPAGE_437=y
+CONFIG_NLS_ISO8859_1=y
+
 # Audio
 CONFIG_SOUND=y
 CONFIG_SND=y
