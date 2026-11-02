@@ -38,6 +38,7 @@ dtb-$(CONFIG_ARCH_STM32) += \
 	stm32mp153c-dhcor-drc-compact.dtb \
 	stm32mp157a-avenger96.dtb \
 	stm32mp157a-dhcor-avenger96.dtb \
+	stm32mp157a-100ask-pro.dtb \
 	stm32mp157a-dk1.dtb \
 	stm32mp157a-dk1-a7-examples.dtb \
 	stm32mp157a-dk1-m4-examples.dtb \
