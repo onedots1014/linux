@@ -1,0 +1,168 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR BSD-3-Clause)
+/*
+ * SCMI served by TF-A SP_MIN on STM32MP15 (instead of OP-TEE).
+ *
+ * ST's stm32mp15-scmi.dtsi assumes OP-TEE ("linaro,scmi-optee"). With
+ * SP_MIN as BL32 the server is TF-A's drivers/scmi-msg, reached through
+ * the SMC conduit (agent 0: SiP 0x82002000) with its shared memory in the
+ * last page of SYSRAM (plat/st/stm32mp1/stm32mp1_scmi.c).
+ *
+ * SP_MIN only implements the clock and reset-domain protocols. Its clock
+ * table must include CK_SCMI_GPIOA..K (IDs 21-31, added by the SDK's
+ * tf-a/0007): in secure mode Linux's RCC driver does not register the
+ * GPIO bank clocks itself. Unlike ST's -scmi.dtsi there is no OP-TEE
+ * reserved memory. All IDs match include/dt-bindings/clock/stm32mp1-clks.h
+ * and include/dt-bindings/reset/stm32mp1-resets.h.
+ */
+
+/ {
+	scmi_sram: sram@2ffff000 {
+		compatible = "mmio-sram";
+		reg = <0x2ffff000 0x1000>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <0 0x2ffff000 0x1000>;
+
+		scmi_shm: scmi-sram@0 {
+			compatible = "arm,scmi-shmem";
+			reg = <0 0x80>;
+		};
+	};
+
+	firmware {
+		scmi: scmi {
+			bootph-some-ram;
+			compatible = "arm,scmi-smc";
+			arm,smc-id = <0x82002000>;
+			shmem = <&scmi_shm>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			scmi_clk: protocol@14 {
+				reg = <0x14>;
+				#clock-cells = <1>;
+			};
+
+			scmi_reset: protocol@16 {
+				reg = <0x16>;
+				#reset-cells = <1>;
+			};
+		};
+	};
+};
+
+/delete-node/ &clk_hse;
+/delete-node/ &clk_hsi;
+/delete-node/ &clk_lse;
+/delete-node/ &clk_lsi;
+/delete-node/ &clk_csi;
+
+
+&cpu0 {
+	clocks = <&scmi_clk CK_SCMI_MPU>;
+};
+
+&cpu1 {
+	clocks = <&scmi_clk CK_SCMI_MPU>;
+};
+
+&dsi {
+	clocks = <&rcc DSI>, <&scmi_clk CK_SCMI_HSE>, <&rcc DSI_PX>;
+};
+
+&gpioa {
+	clocks = <&scmi_clk CK_SCMI_GPIOA>;
+};
+
+&gpiob {
+	clocks = <&scmi_clk CK_SCMI_GPIOB>;
+};
+
+&gpioc {
+	clocks = <&scmi_clk CK_SCMI_GPIOC>;
+};
+
+&gpiod {
+	clocks = <&scmi_clk CK_SCMI_GPIOD>;
+};
+
+&gpioe {
+	clocks = <&scmi_clk CK_SCMI_GPIOE>;
+};
+
+&gpiof {
+	clocks = <&scmi_clk CK_SCMI_GPIOF>;
+};
+
+&gpiog {
+	clocks = <&scmi_clk CK_SCMI_GPIOG>;
+};
+
+&gpioh {
+	clocks = <&scmi_clk CK_SCMI_GPIOH>;
+};
+
+&gpioi {
+	clocks = <&scmi_clk CK_SCMI_GPIOI>;
+};
+
+&gpioj {
+	clocks = <&scmi_clk CK_SCMI_GPIOJ>;
+};
+
+&gpiok {
+	clocks = <&scmi_clk CK_SCMI_GPIOK>;
+};
+
+&gpioz {
+	clocks = <&scmi_clk CK_SCMI_GPIOZ>;
+};
+
+&hash1 {
+	clocks = <&scmi_clk CK_SCMI_HASH1>;
+	resets = <&scmi_reset RST_SCMI_HASH1>;
+};
+
+&i2c4 {
+	clocks = <&scmi_clk CK_SCMI_I2C4>;
+	resets = <&scmi_reset RST_SCMI_I2C4>;
+};
+
+&i2c6 {
+	clocks = <&scmi_clk CK_SCMI_I2C6>;
+	resets = <&scmi_reset RST_SCMI_I2C6>;
+};
+
+&iwdg2 {
+	clocks = <&rcc IWDG2>, <&scmi_clk CK_SCMI_LSI>;
+};
+
+&m4_rproc {
+	resets = <&scmi_reset RST_SCMI_MCU>,
+		 <&scmi_reset RST_SCMI_MCU_HOLD_BOOT>;
+	reset-names = "mcu_rst", "hold_boot";
+	/delete-property/ st,syscfg-holdboot;
+};
+
+&mdma1 {
+	resets = <&scmi_reset RST_SCMI_MDMA>;
+};
+
+&rcc {
+	compatible = "st,stm32mp1-rcc-secure", "syscon";
+	clock-names = "hse", "hsi", "csi", "lse", "lsi";
+	clocks = <&scmi_clk CK_SCMI_HSE>,
+		 <&scmi_clk CK_SCMI_HSI>,
+		 <&scmi_clk CK_SCMI_CSI>,
+		 <&scmi_clk CK_SCMI_LSE>,
+		 <&scmi_clk CK_SCMI_LSI>;
+};
+
+&rng1 {
+	clocks = <&scmi_clk CK_SCMI_RNG1>;
+	resets = <&scmi_reset RST_SCMI_RNG1>;
+};
+
+&rtc {
+	clocks = <&scmi_clk CK_SCMI_RTCAPB>, <&scmi_clk CK_SCMI_RTC>;
+};
