@@ -15,6 +15,7 @@
 		serial0 = &uart4;	/* debug console */
 		mmc0 = &sdmmc1;		/* microSD */
 		mmc1 = &sdmmc2;		/* eMMC: root=/dev/mmcblk1pN */
+		mmc2 = &sdmmc3;		/* AP6236 WiFi (SDIO) */
 	};
 
 	chosen {
@@ -29,9 +30,31 @@
 		regulator-max-microvolt = <3300000>;
 		regulator-always-on;
 	};
+
+	/* AP6236 WL_REG_ON on PI3 */
+	wifi_pwrseq: wifi-pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_pwrseq_pins_100ask>;
+		reset-gpios = <&gpioi 3 GPIO_ACTIVE_LOW>;
+		post-power-on-delay-ms = <150>;
+	};
 };
 
 &pinctrl {
+	/*
+	 * PH4 is driven low as in the vendor 5.4 device tree; its use on
+	 * the carrier is undocumented.
+	 */
+	wifi_pwrseq_pins_100ask: wifi-pwrseq-100ask-0 {
+		pins {
+			pinmux = <STM32_PINMUX('H', 4, GPIO)>;
+			bias-pull-up;
+			output-low;
+			slew-rate = <0>;
+		};
+	};
+
 	uart4_pins_100ask: uart4-100ask-0 {
 		pins1 {
 			pinmux = <STM32_PINMUX('A', 12, AF6)>; /* UART4_TX */
@@ -79,6 +102,31 @@
 	bus-width = <4>;
 	vmmc-supply = <&v3v3>;
 	status = "okay";
+};
+
+/* AP6236 WiFi (BCM43436B0), brcmfmac over SDIO */
+&sdmmc3 {
+	pinctrl-names = "default", "opendrain", "sleep";
+	pinctrl-0 = <&sdmmc3_b4_pins_a>;
+	pinctrl-1 = <&sdmmc3_b4_od_pins_a>;
+	pinctrl-2 = <&sdmmc3_b4_sleep_pins_a>;
+	non-removable;
+	cap-power-off-card;
+	cap-sdio-irq;
+	keep-power-in-suspend;
+	st,neg-edge;
+	bus-width = <4>;
+	max-frequency = <25000000>;
+	vmmc-supply = <&v3v3>;
+	mmc-pwrseq = <&wifi_pwrseq>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	wifi@1 {
+		compatible = "brcm,bcm4329-fmac";
+		reg = <1>;
+	};
 };
 
 /* debug console, routed to the carrier's USB-serial bridge */
