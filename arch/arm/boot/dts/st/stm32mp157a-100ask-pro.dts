@@ -79,6 +79,35 @@
 		};
 	};
 
+	/*
+	 * WM8960 audio. The codec is configured and kept powered by the M4
+	 * firmware (I2C1), which also records through SAI1_B; SAI1_B is the
+	 * clock master (MCLK, BCLK, LRCLK). Linux only plays through SAI1_A,
+	 * synchronised to SAI1_B, so the codec appears here as a dummy DAI.
+	 */
+	wm8960_dac: audio-codec-dac {
+		compatible = "linux,spdif-dit";
+		#sound-dai-cells = <0>;
+	};
+
+	sound {
+		compatible = "simple-audio-card";
+		simple-audio-card,name = "WM8960-100ask";
+		simple-audio-card,format = "i2s";
+		simple-audio-card,bitclock-master = <&sound_codec>;
+		simple-audio-card,frame-master = <&sound_codec>;
+
+		simple-audio-card,cpu {
+			sound-dai = <&sai1a>;
+			dai-tdm-slot-num = <2>;
+			dai-tdm-slot-width = <16>;
+		};
+
+		sound_codec: simple-audio-card,codec {
+			sound-dai = <&wm8960_dac>;
+		};
+	};
+
 	/* AP6236 WL_REG_ON on PI3 */
 	wifi_pwrseq: wifi-pwrseq {
 		compatible = "mmc-pwrseq-simple";
@@ -100,6 +129,22 @@
 			bias-pull-up;
 			output-low;
 			slew-rate = <0>;
+		};
+	};
+
+	/* SAI1_SD_A: Linux playback data to WM8960 DACDAT */
+	sai1a_pins_100ask: sai1a-100ask-0 {
+		pins {
+			pinmux = <STM32_PINMUX('B', 2, AF6)>; /* SAI1_SD_A */
+			bias-disable;
+			drive-push-pull;
+			slew-rate = <0>;
+		};
+	};
+
+	sai1a_sleep_pins_100ask: sai1a-100ask-sleep-0 {
+		pins {
+			pinmux = <STM32_PINMUX('B', 2, ANALOG)>; /* SAI1_SD_A */
 		};
 	};
 
@@ -132,6 +177,22 @@
 				 <STM32_PINMUX('A', 11, ANALOG)>; /* UART4_RX */
 		};
 	};
+};
+
+/*
+ * DMA2 belongs to the M4 (SAI1_B capture runs on it, also while Linux is
+ * suspended), as in ST's *-m4-examples boards. Linux keeps DMA1.
+ * The DMAMUX driver numbers its channels by the order of dma-masters, and
+ * DMAMUX1 channels 0-7 are wired to DMA1, 8-15 to DMA2: a list that starts
+ * with DMA2 would program DMA1's mux channels, including the M4's.
+ */
+&dma2 {
+	status = "disabled";
+};
+
+&dmamux1 {
+	dma-masters = <&dma1>;
+	dma-channels = <8>;
 };
 
 &ipcc {
@@ -167,6 +228,28 @@
 	st,neg-edge;
 	bus-width = <4>;
 	vmmc-supply = <&v3v3>;
+	status = "okay";
+};
+
+/*
+ * SAI1: Linux owns only block A (playback). Block B and its pins
+ * (PF6-PF9) are driven by the M4. The kernel clock comes from PLL3_Q
+ * (24.576 MHz); the M4 firmware relies on that for MCKDIV = 2.
+ */
+&sai1 {
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sai1a_pins_100ask>;
+	pinctrl-1 = <&sai1a_sleep_pins_100ask>;
+	clocks = <&rcc SAI1>, <&rcc PLL3_Q>, <&rcc PLL3_R>;
+	clock-names = "pclk", "x8k", "x11k";
+	assigned-clocks = <&rcc SAI1_K>;
+	assigned-clock-parents = <&rcc PLL3_Q>;
+	status = "okay";
+};
+
+&sai1a {
+	dma-names = "tx";
+	st,sync = <&sai1b 1>;
 	status = "okay";
 };
 
