@@ -31,6 +31,54 @@
 		regulator-always-on;
 	};
 
+	/*
+	 * Cortex-M4 memory, laid out as on the ST DK boards and as linked by
+	 * firmware/m4 (STM32MP157DACX_RAM.ld): code and data in SRAM1/SRAM2
+	 * through the MCU alias at 0x10000000, the OpenAMP vrings and buffers
+	 * at the start of SRAM3, the vector table in RETRAM.
+	 */
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		mcuram2: mcuram2@10000000 {
+			compatible = "shared-dma-pool";
+			reg = <0x10000000 0x40000>;
+			no-map;
+		};
+
+		vdev0vring0: vdev0vring0@10040000 {
+			compatible = "shared-dma-pool";
+			reg = <0x10040000 0x1000>;
+			no-map;
+		};
+
+		vdev0vring1: vdev0vring1@10041000 {
+			compatible = "shared-dma-pool";
+			reg = <0x10041000 0x1000>;
+			no-map;
+		};
+
+		vdev0buffer: vdev0buffer@10042000 {
+			compatible = "shared-dma-pool";
+			reg = <0x10042000 0x4000>;
+			no-map;
+		};
+
+		mcuram: mcuram@30000000 {
+			compatible = "shared-dma-pool";
+			reg = <0x30000000 0x40000>;
+			no-map;
+		};
+
+		retram: retram@38000000 {
+			compatible = "shared-dma-pool";
+			reg = <0x38000000 0x10000>;
+			no-map;
+		};
+	};
+
 	/* AP6236 WL_REG_ON on PI3 */
 	wifi_pwrseq: wifi-pwrseq {
 		compatible = "mmc-pwrseq-simple";
@@ -84,6 +132,24 @@
 				 <STM32_PINMUX('A', 11, ANALOG)>; /* UART4_RX */
 		};
 	};
+};
+
+&ipcc {
+	status = "okay";
+};
+
+/*
+ * Cortex-M4, loaded and started by Linux (remoteproc). The MCU reset and
+ * hold-boot lines come from SP_MIN over SCMI (stm32mp15-sp-min-scmi.dtsi).
+ */
+&m4_rproc {
+	memory-region = <&retram>, <&mcuram>, <&mcuram2>, <&vdev0vring0>,
+			<&vdev0vring1>, <&vdev0buffer>;
+	mboxes = <&ipcc 0>, <&ipcc 1>, <&ipcc 2>;
+	mbox-names = "vq0", "vq1", "shutdown";
+	interrupt-parent = <&exti>;
+	interrupts = <68 1>;
+	status = "okay";
 };
 
 &pwr_regulators {
