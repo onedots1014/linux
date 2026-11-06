@@ -202,6 +202,10 @@
 /*
  * Cortex-M4, loaded and started by Linux (remoteproc). The MCU reset and
  * hold-boot lines come from SP_MIN over SCMI (stm32mp15-sp-min-scmi.dtsi).
+ * The M4 keeps running while Linux is in s2idle: its RPMsg doorbell wakes
+ * Linux through the IPCC "rx" interrupt (EXTI 61, wakeup-source in
+ * stm32mp151.dtsi), and wakeup-source here also arms the M4 watchdog
+ * interrupt (EXTI 68) as a wake source.
  */
 &m4_rproc {
 	memory-region = <&retram>, <&mcuram>, <&mcuram2>, <&vdev0vring0>,
@@ -210,6 +214,7 @@
 	mbox-names = "vq0", "vq1", "shutdown";
 	interrupt-parent = <&exti>;
 	interrupts = <68 1>;
+	wakeup-source;
 	status = "okay";
 };
 
