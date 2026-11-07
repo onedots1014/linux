@@ -199,6 +199,20 @@
 	dma-channels = <8>;
 };
 
+&gpiof {
+	/*
+	 * PF12 enables the SY6280 switch that would drive 5 V onto the
+	 * Type-C VBUS. The OTG port is device-only (see &usbotg_hs), so keep
+	 * the switch off: the host supplies VBUS.
+	 */
+	usb-otg-vbus-off-hog {
+		gpio-hog;
+		gpios = <12 GPIO_ACTIVE_HIGH>;
+		output-low;
+		line-name = "usb-otg-vbus-en";
+	};
+};
+
 &ipcc {
 	status = "okay";
 };
@@ -312,4 +326,54 @@
 	/delete-property/dmas;
 	/delete-property/dma-names;
 	status = "okay";
+};
+
+/*
+ * USB host: USBH port 0 goes to a USB2514 hub (reset on PF2, pull-up not
+ * fitted). Downstream: the 4G module, an RTL8152 Ethernet and two USB-A
+ * sockets, all VBUS from the 5 V rail. The onboard-usb-hub driver
+ * releases the reset before the hub is enumerated.
+ */
+&usbh_ehci {
+	phys = <&usbphyc_port0>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	hub@1 {
+		compatible = "usb424,2514";
+		reg = <1>;
+		reset-gpios = <&gpiof 2 GPIO_ACTIVE_LOW>;
+		vdd-supply = <&v3v3>;
+	};
+};
+
+/*
+ * USB OTG on the Type-C socket, device only. The FUSB302 port controller
+ * sits on I2C1, which the M4 owns for the codec, so Linux cannot run it;
+ * left unconfigured it presents Rd on CC, so a host sees a device and
+ * supplies VBUS. Without the controller there is no VBUS/ID detection:
+ * the B-session is set through the role switch instead (userspace writes
+ * "device" to /sys/class/usb_role/<...>/role, see S45usbgadget), as
+ * U-Boot does with u-boot,force-b-session-valid.
+ */
+&usbotg_hs {
+	phys = <&usbphyc_port1 0>;
+	phy-names = "usb2-phy";
+	dr_mode = "peripheral";
+	usb-role-switch;
+	role-switch-default-mode = "peripheral";
+	status = "okay";
+};
+
+&usbphyc {
+	status = "okay";
+};
+
+&usbphyc_port0 {
+	phy-supply = <&v3v3>;
+};
+
+&usbphyc_port1 {
+	phy-supply = <&v3v3>;
 };
