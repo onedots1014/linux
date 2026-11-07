@@ -363,6 +363,14 @@
 	dr_mode = "peripheral";
 	usb-role-switch;
 	role-switch-default-mode = "peripheral";
+	/*
+	 * Dedicated TX FIFOs, in 32-bit words. A high-speed bulk IN endpoint
+	 * needs one of at least 128 words (512-byte packets); the SoC default
+	 * (256 16 16 ...) has only one, so a gadget with two bulk IN endpoints
+	 * (ECM + ACM, see S45usbgadget) fails with "No suitable fifo found".
+	 * 352 words in total, within the 408 left after the RX and NP TX FIFOs.
+	 */
+	g-tx-fifo-size = <128 128 16 16 16 16 16 16>;
 	status = "okay";
 };
 
